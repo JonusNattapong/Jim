@@ -23,7 +23,7 @@ export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming
     <Box flexDirection="column" marginBottom={1} width="100%">
       {/* Top Banner with Title */}
       <Box justifyContent="space-between" paddingX={1}>
-        <Text color="greenBright" bold>👽 Jim {process.env.JIM_VERSION || "v0.4.0"}</Text>
+        <Text color="greenBright" bold>Jim {process.env.JIM_VERSION || "v0.4.0"}</Text>
         <Text dimColor>Alien v2.1</Text>
       </Box>
 
