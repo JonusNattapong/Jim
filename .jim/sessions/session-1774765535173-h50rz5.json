@@ -1,0 +1,26 @@
+{
+  "id": "session-1774765535173-h50rz5",
+  "createdAt": "2026-03-29T06:26:12.381Z",
+  "updatedAt": "2026-03-29T06:26:12.381Z",
+  "messages": [
+    {
+      "role": "user",
+      "content": "ase. just the table, nothing else."
+    },
+    {
+      "role": "assistant",
+      "content": "What table? I don't have context from a previous conversation. Could you clarify what you're asking for?"
+    },
+    {
+      "role": "user",
+      "content": "ng else: | Language | Type | Speed | | --- | --- | --- | | Python | Dynamic | Slow | | Rust | Static | Fast | | Go | Static | Fast |"
+    },
+    {
+      "role": "assistant",
+      "content": "I see the table structure, but I'm not sure what data you want me to display in it. What should go in the rows?"
+    }
+  ],
+  "model": "minimax/minimax-m2.5:free",
+  "projectRoot": "D:\\Projects\\Github\\k6",
+  "turnCount": 0
+}

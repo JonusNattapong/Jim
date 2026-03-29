@@ -1,0 +1,16 @@
+{
+  "recentModels": [
+    "minimax/minimax-m2.5:free"
+  ],
+  "favoriteModels": [],
+  "recentProviders": [
+    "openai",
+    "auto",
+    "openai-compatible"
+  ],
+  "favoriteProviders": [],
+  "recentConnections": [
+    "kilocode"
+  ],
+  "favoriteConnections": []
+}

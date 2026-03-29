@@ -1,0 +1,7 @@
+[app.tsx] UI Initializing with 0 raw messages -> 0 UI messages
+[index.tsx] process.argv: ["C:\\Program Files\\nodejs\\node.exe","D:\\Projects\\Github\\k6\\src\\cli\\index.tsx","session-1774790844634-h4ns1k"]
+[app.tsx] UI Initializing with 0 raw messages -> 0 UI messages
+[index.tsx] process.argv: ["C:\\Program Files\\nodejs\\node.exe","D:\\Projects\\Github\\k6\\src\\cli\\index.tsx","session-1774790844634-h4ns1k"]
+[index.tsx] Attempting load: session-1774790844634-h4ns1k
+[index.tsx] Result: true, Histories: 2
+[app.tsx] UI Initializing with 2 raw messages -> 2 UI messages

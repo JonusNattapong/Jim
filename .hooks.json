@@ -1,0 +1,8 @@
+[
+  {
+    "event": "PostToolUse",
+    "toolPattern": "^(edit_file|write_file)$",
+    "command": "node scripts/tsc-hook.js",
+    "description": "Auto-run TypeScript compiler and report errors back to Jim"
+  }
+]

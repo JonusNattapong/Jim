@@ -1,0 +1,75 @@
+{
+  "name": "jim",
+  "version": "0.4.0",
+  "description": "AI coding agent with 15 tools, multi-model support, hooks, sub-agents, and MCP integration",
+  "type": "module",
+  "bin": {
+    "jim": "./dist/cli/index.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/agent/index.js",
+      "types": "./dist/agent/index.d.ts"
+    },
+    "./tools": {
+      "import": "./dist/tools/index.js",
+      "types": "./dist/tools/index.d.ts"
+    }
+  },
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "coding-agent",
+    "ai",
+    "openai",
+    "cli",
+    "developer-tools",
+    "mcp"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli/index.tsx",
+    "start": "node dist/cli/index.js",
+    "smoke:exit": "npm run build && node scripts/smoke-exit.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:legacy": "tsx src/test/tools.test.ts",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "dependencies": {
+    "cli-highlight": "^2.1.11",
+    "dotenv": "^17.3.1",
+    "gradient-string": "^3.0.0",
+    "ink": "^6.8.0",
+    "ink-big-text": "^2.0.0",
+    "ink-gradient": "^4.0.0",
+    "ink-select-input": "^6.2.0",
+    "ink-spinner": "^5.0.0",
+    "ink-text-input": "^6.0.0",
+    "openai": "^4.85.0",
+    "pino": "^10.3.1",
+    "react": "^19.2.4",
+    "terminal-image": "^4.2.0",
+    "tiktoken": "^1.0.22",
+    "ts-morph": "^27.0.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/gradient-string": "^1.1.6",
+    "@types/ink-big-text": "^1.2.4",
+    "@types/ink-gradient": "^2.0.4",
+    "@types/ink-select-input": "^3.0.5",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.14",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.2"
+  }
+}

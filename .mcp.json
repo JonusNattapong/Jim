@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "mcpsearch": {
+      "command": "python",
+      "args": ["-m", "mcp_server"],
+      "cwd": "D:/Projects/Github/MCPSearch",
+      "env": {
+        "OPENAI_API_KEY": ""
+      }
+    }
+  }
+}

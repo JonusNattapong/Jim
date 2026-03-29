@@ -1,0 +1,15 @@
+{
+  "preset": "openrouter",
+  "updatedAt": "2026-03-29T11:33:35.150Z",
+  "settings": {
+    "anthropic": {
+      "apiKey": "sk-ant-test",
+      "baseUrl": "https://api.anthropic.com"
+    },
+    "kilocode": {
+      "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbnYiOiJwcm9kdWN0aW9uIiwia2lsb1VzZXJJZCI6IjZjN2IzMGU1LWU4NTItNDA4My1iZDIyLTE4NDkyODM2MTZlZCIsImFwaVRva2VuUGVwcGVyIjpudWxsLCJ2ZXJzaW9uIjozLCJpYXQiOjE3NzQ3MzgzMzcsImV4cCI6MTkzMjQxODMzN30.4gXo6FaZ504s5wymTXKrE_LXfnbhFZ2jriLPAFFQqNs",
+      "baseUrl": "https://api.kilo.ai/api/gateway"
+    }
+  },
+  "selectedPreset": "anthropic"
+}
