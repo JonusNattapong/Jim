@@ -1,29 +1,31 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
 
-const PHASES = ["(●   )", "( ●  )", "(  ● )", "(   ●)", "(  ● )", "( ●  )"];
+const PHASES = ["┌   ┐", "[ ̄ ̯̄ ]", "[  ̄ ̯̄  ]", "[   ̄ ̯̄   ]", "[  ̄ ̯̄  ]", "[ ̄ ̯̄ ]"];
+
 const PHRASES = [
-  "Thinking...",
-  "Vibing...",
-  "Whatchamacallit...",
-  "Analyzing...",
-  "Reticulating splines...",
-  "Synthesizing knowledge...",
-  "Consulting the oracle...",
-  "Processing...",
-  "Deep breathing...",
-  "Pondering life...",
-  "Optimizing performance...",
-  "Drafting a masterpiece...",
+  "👽 Scanning...",
+  "👽 Transmitting...",
+  "🛸 Cosmic processing...",
+  "👽 Analyzing xenocode...",
+  "Interfacing with mainframe...",
+  "Decoding alien logic...",
+  "Processing intergalactic data...",
+  "Synchronizing quantum circuits...",
+  "Probing the void...",
+  "Calculating warp coordinates...",
+  "Transmuting silicon...",
 ];
 
 const TIPS = [
-  "Run /terminal-setup to enable Shift+Enter for new lines",
-  "Use /stats to see your coding heatmaps and streaks",
-  "The /compact command helps reduce context window token usage",
-  "Ask /help to see all available commands and shortcuts",
-  "You can /reset to clear history without losing model context",
-  "Try /checkpoint to save a snapshot before large edits",
+  "� Run /terminal-setup to enable Shift+Enter for new lines",
+  "🛸 Use /stats to see your intergalactic metrics",
+  "💫 The /compact command reduces signal degradation",
+  "👽 Ask /help to access the alien database",
+  "💫 You can /reset to clear corrupted data",
+  "👽 Try /checkpoint to establish a teleportation point",
+  "👽 Resistance is futile, but efficiency is optional",
+  "🛸 Greetings, carbon-based life form",
 ];
 
 interface ThinkingAnimationProps {
@@ -58,8 +60,8 @@ export const ThinkingAnimation: React.FC<ThinkingAnimationProps> = ({ tokens, st
   return (
     <Box flexDirection="column" marginTop={1} marginLeft={2}>
       <Box flexDirection="row">
-        <Text color="redBright" bold>{PHASES[phase]} </Text>
-        <Text color="redBright" bold>{PHRASES[phraseIdx]}</Text>
+        <Text color="greenBright" bold>{PHASES[phase]} </Text>
+        <Text color="greenBright" bold>{PHRASES[phraseIdx]}</Text>
         <Text dimColor> (</Text>
         <Text color="white" dimColor>{displayTime}</Text>
         {tokens !== undefined && (

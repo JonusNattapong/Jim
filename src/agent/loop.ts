@@ -27,6 +27,9 @@ import type { Reflection } from "./reflexion.js";
 import { getArchivalMemoryStore } from "../context/memory-store.js";
 import { TreeSearchEngine } from "./tree_search.js";
 import type { SimulationResult, TreeSearchResult } from "./tree_search.js";
+import { UserPersonaManager } from "../context/persona.js";
+import { SkillStore } from "./skill_store.js";
+import { ConsolidationEngine } from "./consolidation.js";
 
 export interface AgentConfig {
   apiKey: string;
@@ -79,6 +82,9 @@ export class Agent {
   private reflexion!: ReflexionEngine;
   private treeSearch?: TreeSearchEngine;
   private lastReflectionInjection: number = -1;
+  private persona: UserPersonaManager;
+  private skillStore: SkillStore;
+  private consolidation: ConsolidationEngine;
 
   constructor(config: AgentConfig) {
     this.config = config;
@@ -99,6 +105,11 @@ export class Agent {
 
     // Initialize reflexion engine for self-critique
     this.reflexion = new ReflexionEngine(this.provider, config.model);
+
+    // Initialize learning systems
+    this.persona = new UserPersonaManager(config.projectRoot);
+    this.skillStore = new SkillStore(config.projectRoot);
+    this.consolidation = new ConsolidationEngine(this.provider, config.model, this.persona, this.skillStore);
 
     // Wire up LLM-based context summarization
     this.context.setSummarizer(async (messages) => {
@@ -145,6 +156,10 @@ export class Agent {
     await this.memory.loadAll();
     callbacks.onMemoryLoaded?.(this.memory.getLayers().length);
     await this.hooks.loadFromFile();
+
+    // Load learning data
+    await this.persona.load();
+    await this.skillStore.load();
 
     // Load persisted permission decisions
     await this.permissions.loadPersisted();
@@ -225,7 +240,16 @@ export class Agent {
 
     const memoryContext = this.memory.buildContext();
     const repoMapStr = this.cachedRepoMap ? `\n\n## Repository Map\n${this.cachedRepoMap}` : "";
-    const systemPrompt = buildSystemPrompt(this.config.projectRoot, this.workMode) + (memoryContext ? `\n${memoryContext}` : "") + repoMapStr;
+    
+    // Inject persona and learned skills into the prompt
+    const personaContext = this.persona.buildPromptFragment();
+    const skillsContext = this.skillStore.buildPromptFragment();
+
+    const systemPrompt = buildSystemPrompt(this.config.projectRoot, this.workMode) + 
+      (memoryContext ? `\n${memoryContext}` : "") + 
+      (personaContext ? `\n${personaContext}` : "") +
+      (skillsContext ? `\n${skillsContext}` : "") +
+      repoMapStr;
     
     // Auto-compact before adding new message if tokens are high (threshold: 100k)
     if (this.context.estimateTokens() > 100000) {
@@ -277,6 +301,10 @@ export class Agent {
             await this.tryAutoLearn(userMessage, content);
           }
           await this.saveSession(callbacks);
+
+          // Proactively consolidate session (Persona + Skills)
+          await this.consolidation.consolidate(this.context.getMessages());
+
           this.log.info({ turns: this.turnCount + 1, durationMs: Date.now() - runStart }, "run complete");
           return content;
         }

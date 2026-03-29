@@ -126,7 +126,7 @@ export const SearchablePicker: React.FC<SearchablePickerProps> = ({
         <Text dimColor>esc</Text>
       </Box>
       <Box marginTop={1}>
-        <Text color="cyan">Search </Text>
+        <Text color="greenBright">Search </Text>
         <TextInput value={query} onChange={setQuery} placeholder="type to filter..." />
       </Box>
       <Box marginTop={1} marginBottom={1}>

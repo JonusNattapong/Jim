@@ -23,61 +23,61 @@ export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming
     <Box flexDirection="column" marginBottom={1} width="100%">
       {/* Top Banner with Title */}
       <Box justifyContent="space-between" paddingX={1}>
-        <Text color="cyan" bold>Jim {process.env.JIM_VERSION || "v0.4.0"}</Text>
-        <Text dimColor>Alpha v2.1</Text>
+        <Text color="greenBright" bold>👽 Jim {process.env.JIM_VERSION || "v0.4.0"}</Text>
+        <Text dimColor>Alien v2.1</Text>
       </Box>
 
       {/* Main Dashboard Box */}
-      <Box borderStyle="single" borderColor="cyan" flexDirection="row" paddingX={2} paddingY={0}>
+      <Box borderStyle="single" borderColor="greenBright" flexDirection="row" paddingX={2} paddingY={0}>
         {/* Left Section: Branding & ASCII */}
         <Box flexDirection="column" width="35%" paddingY={1} alignItems="center">
           <Box marginY={1}>
-            <Text color="brightCyan" bold>
-      {`      ▟▛▀▀▜▙
-      ▙▄▄▄▄▟▛
-       ▟▛▛▙
-      ▟▛  ▜▙
-     ▟▛    ▜▙`}
+            <Text color="greenBright" bold>
+      {`    👽 ALIEN ZONE 🛸
+      ╭───────────────╮
+      │  XENOCODE AI  │
+      ╰───────────────╯
+        🛸 👽 💫`}
             </Text>
           </Box>
           <Box flexDirection="column" alignItems="center">
-            <Text color="brightWhite" bold>{shortModel}</Text>
-            <Text color="cyan" dimColor>{projectRoot}</Text>
+            <Text color="greenBright" bold>{shortModel}</Text>
+            <Text color="greenBright" dimColor>{projectRoot}</Text>
           </Box>
         </Box>
 
         {/* Vertical Accent */}
         <Box width={1} />
-        <Box borderStyle="single" borderColor="gray" borderLeft={true} borderRight={false} borderTop={false} borderBottom={false} height={8} />
+        <Box borderStyle="single" borderColor="greenBright" borderLeft={true} borderRight={false} borderTop={false} borderBottom={false} height={8} />
         <Box width={3} />
 
         {/* Right Section: System Metadata */}
         <Box flexDirection="column" width="65%" paddingY={1}>
           <Box justifyContent="space-between" marginBottom={1}>
-            <Text color="yellow" bold>SYSTEM DASHBOARD</Text>
+            <Text color="greenBright" bold>👽 ALIEN CONTROL</Text>
             <Box>
-               <Text color="cyan" bold>[{projectRoot.split(/[\\/]/).pop()}]</Text>
+               <Text color="greenBright" bold>[{projectRoot.split(/[\\\\\\\\]/).pop()}]</Text>
             </Box>
           </Box>
           
           <Box flexDirection="column">
              <Box justifyContent="space-between">
                 <Box>
-                  <Text dimColor>● CORE STATUS: </Text>
-                  <Text color="greenBright" bold>ONLINE</Text>
+                  <Text dimColor>● PROBE STATUS: </Text>
+                  <Text color="greenBright" bold>👽 ACTIVE</Text>
                 </Box>
                 <Box>
                   <Box width={12}>
-                    <Text dimColor>PERMISSION: </Text>
+                    <Text dimColor>SCAN MODE: </Text>
                   </Box>
-                  <Text color="blueBright" bold>{mode.toUpperCase()}</Text>
+                  <Text color="greenBright" bold>{mode.toUpperCase()}</Text>
                 </Box>
              </Box>
 
              <Box marginTop={1} justifyContent="space-between">
                 <Box>
                   <Text dimColor>● ENVIRONMENT: </Text>
-                  <Text color="magenta" bold>{workMode.toUpperCase()}</Text>
+                  <Text color="greenBright" bold>{workMode.toUpperCase()}</Text>
                 </Box>
                 <Box>
                   <Box width={12}>

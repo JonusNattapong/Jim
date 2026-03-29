@@ -202,7 +202,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ projectRoot, onClose }) =>
             <Box flexDirection="column" width={40}>
               <Box>
                 <Text dimColor>Favorite model: </Text>
-                <Text color="redBright">{data.favoriteModel}</Text>
+                <Text color="greenBright">{data.favoriteModel}</Text>
               </Box>
               <Box marginTop={1}>
                 <Text dimColor>Sessions: </Text>
@@ -224,7 +224,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ projectRoot, onClose }) =>
               </Box>
               <Box marginTop={1}>
                 <Text dimColor>Longest session: </Text>
-                <Text color="redBright">{formatDuration(data.longestSession)}</Text>
+                <Text color="greenBright">{formatDuration(data.longestSession)}</Text>
               </Box>
               <Box>
                 <Text dimColor>Longest streak: </Text>
@@ -238,7 +238,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ projectRoot, onClose }) =>
           </Box>
 
           <Box marginTop={1}>
-            <Text color="blueBright">Your longest session is ~{(data.longestSession / (45 * 60 * 1000)).toFixed(1)}x longer than listening to Abbey Road</Text>
+            <Text color="greenBright">Your longest session is ~{(data.longestSession / (45 * 60 * 1000)).toFixed(1)}x longer than listening to Abbey Road</Text>
           </Box>
         </Box>
       ) : (
@@ -247,7 +247,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ projectRoot, onClose }) =>
             {Object.entries(data.modelUsage).sort((a,b) => b[1] - a[1]).map(([m, val]) => (
                 <Box key={m} marginTop={1}>
                     <Box width={30}>
-                        <Text color="redBright">{m}</Text>
+                        <Text color="greenBright">{m}</Text>
                     </Box>
                     <Text color="white">{(val / 1000).toFixed(1)}k tokens</Text>
                 </Box>

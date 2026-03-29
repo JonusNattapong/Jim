@@ -1,8 +1,5 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { execFileAsync } from "../utils/exec.js";
 import type { ToolDefinition, ToolHandler } from "./types.js";
-
-const execFileAsync = promisify(execFile);
 
 export const office_doctor_definition: ToolDefinition = {
   type: "function",

@@ -153,9 +153,9 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ board }) => {
   const remaining = Math.max(board.total - board.completed, 0);
 
   return (
-    <Box borderStyle="round" borderColor="magenta" paddingX={1} paddingY={0} marginTop={1} marginLeft={4} flexDirection="column">
+    <Box borderStyle="round" borderColor="greenBright" paddingX={1} paddingY={0} marginTop={1} marginLeft={4} flexDirection="column">
       <Box justifyContent="space-between">
-        <Text color="magentaBright">{board.completed} of {board.total} tasks completed</Text>
+        <Text color="greenBright">{board.completed} of {board.total} anomalies resolved</Text>
         <Text dimColor>{board.title}</Text>
       </Box>
 

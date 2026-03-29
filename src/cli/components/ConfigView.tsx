@@ -62,10 +62,10 @@ export const ConfigView: React.FC<ConfigViewProps> = ({ config, onClose, onUpdat
   });
 
   return (
-    <Box flexDirection="column" padding={1} borderStyle="single" borderColor="cyan">
+    <Box flexDirection="column" padding={1} borderStyle="single" borderColor="greenBright">
       <Box marginBottom={1}>
         {["Settings", "Status", "Usage"].map(t => (
-            <Box key={t} marginRight={2} paddingX={1} backgroundColor={tab === t ? "cyan" : undefined}>
+            <Box key={t} marginRight={2} paddingX={1} backgroundColor={tab === t ? "greenBright" : undefined}>
                 <Text bold color={tab === t ? "black" : "gray"}>{t}</Text>
             </Box>
         ))}
@@ -93,12 +93,12 @@ export const ConfigView: React.FC<ConfigViewProps> = ({ config, onClose, onUpdat
               valueColor = item.value ? "green" : "red";
               displayValue = item.value ? "true" : "false";
             } else if (item.type === "enum") {
-              valueColor = "cyan";
+              valueColor = "greenBright";
             }
 
             return (
               <Box key={item.key}>
-                <Text color="cyan">{isSelected ? "❯ " : "  "}</Text>
+                <Text color="greenBright">{isSelected ? "👽 " : "  "}</Text>
                 <Box width={40}>
                   <Text bold={isSelected} color={isSelected ? "white" : "gray"}>
                     {item.label}

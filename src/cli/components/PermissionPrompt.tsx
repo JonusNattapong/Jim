@@ -58,7 +58,7 @@ export const PermissionPrompt: React.FC<PermissionPromptProps> = ({ toolName, ar
       {/* Tool info */}
       <Box marginLeft={1}>
         <Text dimColor>tool </Text>
-        <Text color="cyan" bold>{toolName}</Text>
+        <Text color="greenBright" bold>{toolName}</Text>
         {!isFileTool && (
           <>
             <Text dimColor>  args </Text>

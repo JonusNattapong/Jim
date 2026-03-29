@@ -11,7 +11,7 @@ export const Message: React.FC<MessageProps> = ({ role, content }) => {
   if (role === "user") {
     return (
       <Box marginTop={1} flexDirection="row">
-        <Text color="yellow" bold>❯ </Text>
+        <Text color="greenBright" bold>👽 </Text>
         <Text bold color="white">{content}</Text>
       </Box>
     );
@@ -21,9 +21,9 @@ export const Message: React.FC<MessageProps> = ({ role, content }) => {
     return (
       <Box marginTop={1} flexDirection="row">
         <Box flexDirection="column" marginRight={1}>
-          <Text color="green">▌</Text>
+          <Text color="greenBright">▌</Text>
           {content.split("\n").slice(1).map((_, i) => (
-            <Text key={i} color="green">▌</Text>
+            <Text key={i} color="greenBright">▌</Text>
           ))}
         </Box>
         <Box flexDirection="column" flexShrink={1}>

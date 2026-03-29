@@ -82,7 +82,7 @@ export const ConnectModal: React.FC<ConnectModalProps> = ({
       </Box>
       {activeField && (
         <Box marginTop={1}>
-          <Text color="cyan">{activeField.label} </Text>
+          <Text color="greenBright">{activeField.label} </Text>
           <TextInput
             value={activeValue}
             onChange={(next) => setValues((prev) => ({ ...prev, [activeField.key]: next }))}

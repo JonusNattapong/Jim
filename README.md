@@ -1,11 +1,12 @@
-# Jim
+# JimCode
 
-Jim is a terminal-first AI coding agent built with `TypeScript`, `React 19`, and `Ink`.
+<img src="assets/logo-github.png" alt="JimCode" width="640" />
 
-It is designed for real project work: reading code, planning tasks, asking for user choices when tradeoffs matter, running tools, delegating to sub-agents, saving sessions, and resuming from checkpoints.
+JimCode is an open-source, terminal-based agent framework for code understanding and generation. It features a proactive learning loop inspired by Hermes, with built-in tools for file manipulation, shell commands, web access, and more. JimCode supports multiple LLM providers, dynamic tool loading via MCP, and structured workflows for planning and execution. The CLI includes interactive pickers for models and providers, session management, and a plugin catalog. JimCode is designed to be extensible and adaptable to your coding style.
 
 ## Highlights
 
+- `Proactive learning loop` (Hermes-inspired) for persona and skill mastery
 - `15 built-in tools` plus dynamic MCP tools
 - `Multi-model CLI` with searchable model and provider pickers
 - `Provider selection` with favorites, recents, presets, and native provider setup modals
@@ -16,6 +17,9 @@ It is designed for real project work: reading code, planning tasks, asking for u
 - `Sub-agents` with planner/executor/reviewer support
 - `Sessions + checkpoints` persisted under `~/.jim`
 - `Hooks`, `memory`, `MCP`, and `plugin catalog`
+- `User Persona Modeling` persisted under `.jim/user_persona.json`
+- `Self-Improving Skill Store` persisted under `.jim/skills/`
+- `Structured documentation` for learning, security, and contribution
 - `Structured logging` with `pino`
 - `Semantic repo map` powered by `ts-morph`
 - `Provider metadata registry` for adapter capabilities, transport, and model recommendations
@@ -73,23 +77,23 @@ export LOG_LEVEL=debug
 
 ## Built-in Tools
 
-| Tool | Purpose |
-|------|---------|
-| `read_file` | Read files with line numbers |
-| `edit_file` | Exact-match file editing |
-| `write_file` | Create files or helper scripts |
-| `list_files` | Glob-based file discovery |
-| `grep` | Fast content search with ripgrep |
-| `run_command` | Shell execution |
-| `git_command` | Safe git operations |
-| `get_project_info` | Project metadata |
-| `get_repo_map` | Semantic repository map |
-| `todo_write` | Structured task board |
-| `ask_user_choice` | Ask the user to pick an option |
-| `web_fetch` | Fetch URL content |
-| `web_search` | Search the web |
-| `list_plugins` | Show built-in and MCP plugin groups |
-| `spawn_agent` | Delegate to a sub-agent |
+| Tool               | Purpose                             |
+| ------------------ | ----------------------------------- |
+| `read_file`        | Read files with line numbers        |
+| `edit_file`        | Exact-match file editing            |
+| `write_file`       | Create files or helper scripts      |
+| `list_files`       | Glob-based file discovery           |
+| `grep`             | Fast content search with ripgrep    |
+| `run_command`      | Shell execution                     |
+| `git_command`      | Safe git operations                 |
+| `get_project_info` | Project metadata                    |
+| `get_repo_map`     | Semantic repository map             |
+| `todo_write`       | Structured task board               |
+| `ask_user_choice`  | Ask the user to pick an option      |
+| `web_fetch`        | Fetch URL content                   |
+| `web_search`       | Search the web                      |
+| `list_plugins`     | Show built-in and MCP plugin groups |
+| `spawn_agent`      | Delegate to a sub-agent             |
 
 MCP tools are loaded dynamically from `.mcp.json` and appear as additional tool namespaces at runtime.
 
@@ -162,11 +166,20 @@ Jim persists runtime state under `~/.jim`.
 
 Jim loads project memory from the repo when available:
 
-- `CLAUDE.md`
-- `AGENTS.md`
+- `CLAUDE.md` / `AGENTS.md`
+- `LEARNING.md` / `SECURITY.md` / `CONTRIBUTING.md`
 - `CLAUDE.local.md`
 - `.claude/rules/*.md`
 - `MEMORY.md`
+
+## Documentation
+
+For more detailed information, see:
+
+- [LEARNING.md](./LEARNING.md): How Jim learns and adapts to your style.
+- [SECURITY.md](./SECURITY.md): Security policy, permissions, and guardrails.
+- [CONTRIBUTING.md](./CONTRIBUTING.md): Guidelines for extending Jim and adding new tools.
+- [LICENSE](./LICENSE): MIT License terms.
 
 Example conditional rule:
 
@@ -292,9 +305,9 @@ The CLI uses this registry to:
 
 Relevant OpenAI docs:
 
-- Responses API and tools: https://developers.openai.com/api/docs/guides/tools
-- Migrating Chat Completions to Responses: https://developers.openai.com/api/docs/guides/migrate-to-responses
-- Model endpoint support: https://developers.openai.com/api/docs/models
+- Responses API and tools: <https://developers.openai.com/api/docs/guides/tools>
+- Migrating Chat Completions to Responses: <https://developers.openai.com/api/docs/guides/migrate-to-responses>
+- Model endpoint support: <https://developers.openai.com/api/docs/models>
 
 ## Development
 

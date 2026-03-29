@@ -1,8 +1,5 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { execFileAsync } from "../utils/exec.js";
 import type { ToolDefinition, ToolHandler } from "./types.js";
-
-const execFileAsync = promisify(execFile);
 
 function normalizeTwitterUrl(url: string): string {
   return url.replace("x.com", "twitter.com");

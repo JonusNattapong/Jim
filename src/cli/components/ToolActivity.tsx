@@ -36,8 +36,8 @@ const AnimatedScanner: React.FC<{ name: string; args: string }> = ({ name, args 
 
   return (
     <Box>
-      <Text color="cyanBright" bold>[{bar.join("")}] </Text>
-      <Text color="cyanBright">executing ➜ </Text>
+      <Text color="greenBright" bold>[{bar.join("")}] </Text>
+      <Text color="greenBright">executing ➡ </Text>
       <Text color="white" bold>{name} </Text>
       <Text dimColor>{args.slice(0, 40)}{args.length > 40 ? "..." : ""}</Text>
     </Box>
@@ -51,7 +51,7 @@ export const ToolActivity: React.FC<ToolActivityProps> = ({ calls }) => {
     if (call.status === "pending_approval") {
       return (
         <Box>
-          <Text color="yellow">…</Text>
+          <Text color="yellow">🐾</Text>
           <Text> </Text>
           <Text color="yellow" bold>{call.name}</Text>
           <Text dimColor> waiting for approval</Text>
@@ -61,10 +61,10 @@ export const ToolActivity: React.FC<ToolActivityProps> = ({ calls }) => {
 
     return (
       <Box>
-        <Text color="magenta">?</Text>
+        <Text color="greenBright">👽</Text>
         <Text> </Text>
-        <Text color="magenta" bold>{call.name}</Text>
-        <Text dimColor> waiting for user choice</Text>
+        <Text color="greenBright" bold>{call.name}</Text>
+        <Text dimColor> awaiting transmission</Text>
       </Box>
     );
   };
@@ -89,7 +89,7 @@ export const ToolActivity: React.FC<ToolActivityProps> = ({ calls }) => {
                   <Text color="green">✓</Text>
                 )}
                 <Text> </Text>
-                <Text color={call.status === "error" ? "red" : "cyan"} bold>{call.name}</Text>
+                <Text color={call.status === "error" ? "red" : "greenBright"} bold>{call.name}</Text>
                 <Text dimColor> {call.args.slice(0, 60)}{call.args.length > 60 ? "..." : ""}</Text>
               </Box>
             )}
@@ -116,7 +116,7 @@ export const ToolActivity: React.FC<ToolActivityProps> = ({ calls }) => {
                   const isHeader = line.startsWith("@@") || line.startsWith("---") || line.startsWith("+++");
                   
                   if (isHeader) {
-                    return <Text key={j} color="cyan" dimColor>{line}</Text>;
+                    return <Text key={j} color="greenBright" dimColor>{line}</Text>;
                   }
 
                   return (

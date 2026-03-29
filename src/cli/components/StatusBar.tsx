@@ -20,11 +20,11 @@ export const StatusInfo: React.FC<StatusBarProps> = ({ turn, messageCount, sessi
   const shortSession = sessionId.slice(0, 8);
   return (
     <Box>
-      <Text dimColor>  ◇ turn </Text>
-      <Text color="white" dimColor>{turn}</Text>
-      <Text dimColor>  ·  {messageCount} msgs</Text>
-      <Text dimColor>  ·  </Text>
-      <Text dimColor>{shortSession}</Text>
+      <Text dimColor>  � probe </Text>
+      <Text color="greenBright" dimColor>{turn}</Text>
+      <Text dimColor>  •  {messageCount} signals</Text>
+      <Text dimColor>  •  </Text>
+      <Text color="greenBright" dimColor>{shortSession}</Text>
     </Box>
   );
 };

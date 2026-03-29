@@ -233,14 +233,14 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
             if (level === 1) {
               return (
                 <Box key={i} flexDirection="column" marginTop={1}>
-                  <Text bold color="cyan">◆ {block.lines[0]}</Text>
+                  <Text bold color="greenBright">👽 {block.lines[0]}</Text>
                 </Box>
               );
             }
             if (level === 2) {
               return (
                 <Box key={i} marginTop={1}>
-                  <Text bold color="green">◇ {block.lines[0]}</Text>
+                  <Text bold color="greenBright">🛸 {block.lines[0]}</Text>
                 </Box>
               );
             }
@@ -293,9 +293,9 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
                 {block.lines.map((line, j) => (
                   <Box key={j}>
                     {block.ordered ? (
-                      <Text color="cyan" dimColor>{`  ${j + 1}. `}</Text>
+                      <Text color="greenBright" dimColor>{`  ${j + 1}. `}</Text>
                     ) : (
-                      <Text color="cyan">  • </Text>
+                      <Text color="greenBright">  • </Text>
                     )}
                     {renderInline(parseInline(line))}
                   </Box>
@@ -309,7 +309,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
               <Box key={i} marginLeft={2} flexDirection="column">
                 {block.lines.map((line, j) => (
                   <Box key={j}>
-                    <Text color="magenta">  ┃ </Text>
+                    <Text color="greenBright">  ▋ </Text>
                     <Text italic>{renderInline(parseInline(line))}</Text>
                   </Box>
                 ))}
@@ -358,7 +358,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
                   {headers.map((h, ci) => (
                     <React.Fragment key={ci}>
                       <Text dimColor>│</Text>
-                      <Text bold color="cyan">{padCell(h, colWidths[ci])}</Text>
+                      <Text bold color="greenBright">{padCell(h, colWidths[ci])}</Text>
                     </React.Fragment>
                   ))}
                   <Text dimColor>│</Text>

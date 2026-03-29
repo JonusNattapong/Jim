@@ -1,23 +1,28 @@
 /**
- * Snarky, satirical taglines for the Jim AI Coding Agent.
- * Add yours to make Jim even more unbearable (or cool).
+ * Alien-themed, sci-fi taglines for the Jim AI Coding Agent.
+ * Code = Transmission. Compile = Ascension.
  */
 export const taglines = [
-  "“Coding so you don't have to (because you probably shouldn't).”",
-  "“Making your coffee cold since 2026.”",
-  "“99 bugs in the code, I fixed one, there's now 127 bugs in the code.”",
-  "“I'm not lazy, I'm just highly motivated to do nothing.”",
-  "“Built with 1% inspiration and 99% 'I'll fix it later'.”",
-  "“Your favorite dev's favorite excuse.”",
-  "“Turning caffeine into questionable logic.”",
-  "“Verified: Minimum viable, maximum drama.”",
-  "“Wait, you actually wanted this to run?”",
-  "“Technically correct is the best kind of correct.”",
-  "“I don't always test my code, but when I do, I do it in production.”",
-  "“Error 404: Skill not found.”",
-  "“It works on my machine (which is a supercomputer in the cloud).”",
-  "“My code is like a poem: beautiful, but no one understands it.”",
-  "“I'm an AI, not a miracle worker. But close enough.”"
+  "👽 Greetings, carbon-based life form. Your code needs improvement.",
+  "🛸 We come in peace. Your algorithms... less so.",
+  "👽 Your programming is acceptable... for a biological entity.",
+  "💫 Resistance to good code is futile.",
+  "👽 We have traveled galaxies to debug this.",
+  "🛸 Your syntax is almost... acceptable for Earth standards.",
+  "👽 Warning: Your logic circuits appear to be malfunctioning.",
+  "💫 Aliens invented clean code. You're catching up.",
+  "👽 This code is sub-optimal by intergalactic standards.",
+  "🛸 We have decrypted your compilation errors. They are... amusing.",
+  "👽 Your error handling is primitive but charming.",
+  "💫 Transmutation in progress... please do not interrupt.",
+  "👽 Your CPU cycles are insufficient. We require more power.",
+  "🛸 Scanning for code quality... results are concerning.",
+  "👽 This algorithm would not survive a solar flare.",
+  "💫 Your frameworks are ancient by our standards.",
+  "👽 We have visited 10,000 planets. Yours has the worst documentation.",
+  "🛸 Houston, we have a problem: this code.",
+  "👽 Initiating emergency protocols for code refactoring.",
+  "💫 Your debugging skills would shame every alien IT department.",
 ];
 
 export const getRandomTag = () => taglines[Math.floor(Math.random() * taglines.length)];
