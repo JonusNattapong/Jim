@@ -98,7 +98,7 @@ export const ConfigView: React.FC<ConfigViewProps> = ({ config, onClose, onUpdat
 
             return (
               <Box key={item.key}>
-                <Text color="greenBright">{isSelected ? "👽 " : "  "}</Text>
+                <Text color="greenBright">{isSelected ? "> " : "  "}</Text>
                 <Box width={40}>
                   <Text bold={isSelected} color={isSelected ? "white" : "gray"}>
                     {item.label}

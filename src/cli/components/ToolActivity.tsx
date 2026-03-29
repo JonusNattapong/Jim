@@ -51,7 +51,7 @@ export const ToolActivity: React.FC<ToolActivityProps> = ({ calls }) => {
     if (call.status === "pending_approval") {
       return (
         <Box>
-          <Text color="yellow">🐾</Text>
+          <Text color="yellow">*</Text>
           <Text> </Text>
           <Text color="yellow" bold>{call.name}</Text>
           <Text dimColor> waiting for approval</Text>
@@ -61,7 +61,7 @@ export const ToolActivity: React.FC<ToolActivityProps> = ({ calls }) => {
 
     return (
       <Box>
-        <Text color="greenBright">👽</Text>
+        <Text color="greenBright">•</Text>
         <Text> </Text>
         <Text color="greenBright" bold>{call.name}</Text>
         <Text dimColor> awaiting transmission</Text>

@@ -4,10 +4,10 @@ import { Box, Text } from "ink";
 const PHASES = ["┌   ┐", "[ ̄ ̯̄ ]", "[  ̄ ̯̄  ]", "[   ̄ ̯̄   ]", "[  ̄ ̯̄  ]", "[ ̄ ̯̄ ]"];
 
 const PHRASES = [
-  "👽 Scanning...",
-  "👽 Transmitting...",
-  "🛸 Cosmic processing...",
-  "👽 Analyzing xenocode...",
+  "Scanning...",
+  "Transmitting...",
+  "Cosmic processing...",
+  "Analyzing xenocode...",
   "Interfacing with mainframe...",
   "Decoding alien logic...",
   "Processing intergalactic data...",
@@ -18,14 +18,14 @@ const PHRASES = [
 ];
 
 const TIPS = [
-  "� Run /terminal-setup to enable Shift+Enter for new lines",
-  "🛸 Use /stats to see your intergalactic metrics",
-  "💫 The /compact command reduces signal degradation",
-  "👽 Ask /help to access the alien database",
-  "💫 You can /reset to clear corrupted data",
-  "👽 Try /checkpoint to establish a teleportation point",
-  "👽 Resistance is futile, but efficiency is optional",
-  "🛸 Greetings, carbon-based life form",
+  "Run /terminal-setup to enable Shift+Enter for new lines",
+  "Use /stats to see your intergalactic metrics",
+  "The /compact command reduces signal degradation",
+  "Ask /help to access the alien database",
+  "You can /reset to clear corrupted data",
+  "Try /checkpoint to establish a teleportation point",
+  "Resistance is futile, but efficiency is optional",
+  "Greetings, carbon-based life form",
 ];
 
 interface ThinkingAnimationProps {

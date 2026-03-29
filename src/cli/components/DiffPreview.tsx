@@ -19,7 +19,7 @@ export const DiffPreview: React.FC<DiffPreviewProps> = ({ filePath, diff, linesA
     <Box flexDirection="column" marginTop={1}>
       {/* Header */}
       <Box>
-        <Text color="greenBright" bold>👽 {filePath}</Text>
+        <Text color="greenBright" bold>{filePath}</Text>
         <Text dimColor>  </Text>
         <Text color="green">+{linesAdded}</Text>
         <Text dimColor> </Text>

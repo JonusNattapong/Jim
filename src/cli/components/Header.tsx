@@ -33,11 +33,10 @@ export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming
         <Box flexDirection="column" width="35%" paddingY={1} alignItems="center">
           <Box marginY={1}>
             <Text color="greenBright" bold>
-      {`    👽 ALIEN ZONE 🛸
+      {`    ALIEN ZONE
       ╭───────────────╮
       │  XENOCODE AI  │
-      ╰───────────────╯
-        🛸 👽 💫`}
+      ╰───────────────╯`}
             </Text>
           </Box>
           <Box flexDirection="column" alignItems="center">
@@ -54,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming
         {/* Right Section: System Metadata */}
         <Box flexDirection="column" width="65%" paddingY={1}>
           <Box justifyContent="space-between" marginBottom={1}>
-            <Text color="greenBright" bold>👽 ALIEN CONTROL</Text>
+            <Text color="greenBright" bold>ALIEN CONTROL</Text>
             <Box>
                <Text color="greenBright" bold>[{projectRoot.split(/[\\\\\\\\]/).pop()}]</Text>
             </Box>
@@ -64,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming
              <Box justifyContent="space-between">
                 <Box>
                   <Text dimColor>● PROBE STATUS: </Text>
-                  <Text color="greenBright" bold>👽 ACTIVE</Text>
+                  <Text color="greenBright" bold>ACTIVE</Text>
                 </Box>
                 <Box>
                   <Box width={12}>
@@ -89,7 +88,7 @@ export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming
 
              <Box marginTop={1} borderStyle="single" borderColor="gray" paddingX={1} width="100%">
                 <Text color="white" italic>
-                  <Text color="yellow" bold>💡 Tip: </Text>
+                  <Text color="yellow" bold>Tip: </Text>
                   Ask Jim to explore or refactor for better results
                 </Text>
              </Box>
@@ -108,7 +107,7 @@ export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming
         <Text color={parseFloat(estCost) > 0.5 ? "redBright" : "blueBright"}>~${estCost}</Text>
         <Text dimColor>  •  </Text>
         <Text color={streaming ? "magenta" : "gray"} dimColor={!streaming}>
-          {streaming ? "⚡stream" : "■ batch"}
+          {streaming ? "stream" : "batch"}
         </Text>
       </Box>
     </Box>

@@ -11,7 +11,7 @@ export const Message: React.FC<MessageProps> = ({ role, content }) => {
   if (role === "user") {
     return (
       <Box marginTop={1} flexDirection="row">
-        <Text color="greenBright" bold>👽 </Text>
+        <Text color="greenBright" bold>You: </Text>
         <Text bold color="white">{content}</Text>
       </Box>
     );

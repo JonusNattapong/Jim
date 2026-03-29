@@ -233,14 +233,14 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
             if (level === 1) {
               return (
                 <Box key={i} flexDirection="column" marginTop={1}>
-                  <Text bold color="greenBright">👽 {block.lines[0]}</Text>
+                  <Text bold color="greenBright">{block.lines[0]}</Text>
                 </Box>
               );
             }
             if (level === 2) {
               return (
                 <Box key={i} marginTop={1}>
-                  <Text bold color="greenBright">🛸 {block.lines[0]}</Text>
+                  <Text bold color="greenBright">{block.lines[0]}</Text>
                 </Box>
               );
             }

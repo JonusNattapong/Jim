@@ -55,12 +55,11 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const agent = new Agent(config);
   const logo = `
-      � JIM - Xenocode AI 🛸
+      JIM - Xenocode AI
       ╭──────────────────────────────╮
       │  Intergalactic Intelligence   │
-      │  Code Hard, Beam Further 🔮  │
+      │  Code Hard, Beam Further      │
       ╰──────────────────────────────╯
-        🛸 👽 💫 🔮 👽 🛸 💫
   `;
 
   if (process.argv.includes("--smoke-exit")) {
