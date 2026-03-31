@@ -1,6 +1,5 @@
 # JimCode
 
-<img src="assets/logo-github.png" alt="JimCode" width="640" />
 <img src="assets/interface.png" alt="Jim Interface" width="640" />
 
 JimCode is an open-source, terminal-based AI coding agent framework. It features a proactive learning loop inspired by Hermes, with **35+ built-in tools** for file manipulation, shell commands, web access, social media, office documents, and more. JimCode supports multiple LLM providers, dynamic tool loading via MCP, and structured workflows for planning and execution.
@@ -136,6 +135,60 @@ export LOG_LEVEL=debug
 | `git_command`      | Safe git operations                 |
 | `browser_action`   | **Antigravity Browser** (Playwright) |
 | `pending_messages` | Manage async task queue (Mailbox)   |
+
+### Browser Actions (`browser_action`)
+
+The Antigravity Browser engine supports **17 actions** for comprehensive web automation:
+
+#### Navigation & History
+
+| Action | Parameters | Description |
+|--------|------------|-------------|
+| `navigate` | `url` | Go to a URL |
+| `back` | - | Go back in browser history |
+| `forward` | - | Go forward in browser history |
+
+#### Multi-Tab Management
+
+| Action | Parameters | Description |
+|--------|------------|-------------|
+| `new_tab` | `url` | Open URL in a new tab |
+| `switch_tab` | `tab_index` or `tab_title` | Switch to a tab by index or title substring |
+| `close_tab` | - | Close current tab |
+| `list_tabs` | - | List all open tabs with titles and URLs |
+
+#### Interaction
+
+| Action | Parameters | Description |
+|--------|------------|-------------|
+| `click` | `selector` or `text` | Click an element by CSS selector or text content |
+| `type` | `selector`, `text` | Type text into an input field |
+| `wait` | `selector`, `timeout` | Wait for an element to appear (default: 30s) |
+| `upload` | `selector`, `file_path` | Upload a file to a file input element |
+
+#### Content & Analysis
+
+| Action | Parameters | Description |
+|--------|------------|-------------|
+| `extract` | - | Get page text content and interactive elements tree |
+| `evaluate` | `script` | Run custom JavaScript in page context |
+| `metrics` | - | Get performance metrics (load time, FCP, resource count) |
+
+#### Visual & Navigation
+
+| Action | Parameters | Description |
+|--------|------------|-------------|
+| `screenshot` | `file_path` | Capture current page as PNG image |
+| `scroll` | `direction`, `amount` | Scroll page (up/down/top/bottom) with smooth animation |
+| `status` | - | Check if browser is running and current URL |
+
+**Features:**
+
+- 🎨 **Premium HUD** with orange border, status indicator, and REC badge
+- 💫 **Visual Ripples** on click interactions
+- 🎯 **Element Highlighting** before actions
+- 📹 **Video Recording** saved to `.recordings/` folder
+- 🔄 **Smooth Scrolling** with cubic-bezier animation
 
 ### Task Management
 

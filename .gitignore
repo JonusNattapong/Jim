@@ -1,12 +1,11 @@
 # Dependencies
 node_modules/
-
 .workspace/
 .claude-code-main/
 .docs/
-.jim/
 .claude/
 .cline/
+.jim/
 
 # Build output
 dist/

@@ -69,34 +69,21 @@ async function main(): Promise<void> {
   normalizeColorEnv();
   const config = loadConfig();
   const agent = new Agent(config);
-  const logo = `                                                                                                        
-👾 JimCode   
-
-.    ░░░░░░░░   ░▒▒▓▓▓▓▓▒▒▒░
-              .  ░░░░░░      ░░░▒▓▓▓▓▓▓▓▒▒░░          
-░░▒▒▒░░     *      ░░░░░░░░░░░░    .             
-                            *             *                    
-       █████ █████ ██████   ██████
-      ░░███ ░░███ ░░██████ ██████ 
-       ░███  ░███  ░███░█████░███        ██▓▒░░ .
-    .  ░███  ░███  ░███░░███ ░███      ███░░  ▒░  
-       ░███  ░███ *░███ ░░░  ░███     ██▒░
- ███   ░███ .░███  ░███   .  ░███  .  ██▒░   *
-░░████████   █████ █████     █████     ███░    ▓  .
-  ░░░░░░░░ * ░░░░░ ░░░░░   * ░░░░░       ▒████░
+  const logo = `                                                                                                                       
+░░▒▒▒░░     *      ░░░░░░░░    .                
+    ░░░░░░░                   *       .     *                    
+                ██▓▒░░ .
+     *       ███░░   ▒░     ░░▒▒▒▒▒░░
+            ██▒░          ░░░▒▒▓▓▓▒▒░░    .
+   .        ██▒░   *            .
+       *     ███░    ▓░  .
+░▒▓▓▓▒░  *     ▒████░            *
 `;
   if (process.argv.includes("--smoke-exit")) {
     await closeAgent(agent);
     console.log("smoke:ok");
     process.exit(0);
   }
-
-  // Initialize agent (load memory, hooks, MCP)
-  await agent.init({
-    onMemoryLoaded(count) {
-      if (count > 0) console.log(`  Loaded ${count} memory layers`);
-    },
-  });
 
   // DEBUG: console.log("CLI ARGS:", process.argv);
 
@@ -115,37 +102,40 @@ async function main(): Promise<void> {
     }
   }
 
-  if (!sessionIdToLoad) {
-    const recentSessions = await agent.listSessions(config.projectRoot);
-    const recentSameProject = recentSessions.find((session) => session.sameProject);
-    if (recentSameProject) {
-      console.log(`  Hint: resume latest ${config.projectRoot.split(/[\\\\/]/).pop() || "project"} session with jim -s ${recentSameProject.id}`);
-    }
-  }
-
-  if (sessionIdToLoad) {
-    const loaded = await agent.loadSession(sessionIdToLoad);
-    if (loaded) {
-      console.log(`\n  \x1b[32m✔\x1b[0m Restored session: ${sessionIdToLoad}`);
-    } else {
-      console.log(`\n  \x1b[31m✖\x1b[0m Failed to restore session: ${sessionIdToLoad}`);
-    }
-  }
-
+  const { render } = await import("ink");
+  let instance: any;
   let closing = false;
-  const handleShutdown = (code = 0) => {
+
+  const handleShutdown = async (code = 0) => {
     if (closing) return;
     closing = true;
-    void closeAgent(agent).finally(() => process.exit(code));
+
+    // Print exit banner IMMEDIATELY for responsiveness
+    console.log("\n" + gradient.atlas.multiline(logo));
+    console.log(`  \x1b[3m\x1b[90m${getRandomTagline()}\x1b[0m\n`);
+
+    const finalSessionId = agent.getSessionId() || sessionId;
+    console.log(`  \x1b[90mSession\x1b[0m   \x1b[1mJim AI Coding Agent \x1b[36m${config.model}\x1b[0m`);
+    console.log(`  \x1b[90mContinue\x1b[0m  \x1b[1mjim -s ${finalSessionId}\x1b[0m\n`);
+
+    // Unmount UI after printing banner
+    if (instance) {
+      instance.unmount();
+    }
+
+    // Do async cleanup in background (don't wait)
+    closeAgent(agent).catch(() => { });
+
+    process.exit(code);
   };
-  process.once("SIGINT", () => handleShutdown(0));
-  process.once("SIGTERM", () => handleShutdown(0));
+
+  process.on("SIGINT", () => handleShutdown(0));
+  process.on("SIGTERM", () => handleShutdown(0));
 
   const sessionId = agent.getSessionId() || "new_session_" + Date.now().toString(36).slice(-6);
 
-  // Render Ink app
-  const { render } = await import("ink");
-  const { waitUntilExit } = render(
+  // Render TUI FIRST for immediate feedback
+  instance = render(
     <App
       agent={agent}
       initialModel={config.model}
@@ -154,18 +144,38 @@ async function main(): Promise<void> {
     />
   );
 
-  await waitUntilExit();
-  await closeAgent(agent);
+  // Initialize agent in background (non-blocking)
+  agent.init({
+    onMemoryLoaded(count) {
+      if (count > 0) console.log(`  Loaded ${count} memory layers`);
+    },
+  }).then(async () => {
+    // Show hint for recent session if no session specified
+    if (!sessionIdToLoad) {
+      try {
+        const recentSessions = await agent.listSessions(config.projectRoot);
+        const recentSameProject = recentSessions.find((session) => session.sameProject);
+        if (recentSameProject) {
+          console.log(`  Hint: resume latest ${config.projectRoot.split(/[\\\\/]/).pop() || "project"} session with jim -s ${recentSameProject.id}`);
+        }
+      } catch { }
+    }
 
-  // ASCII Banner on exit
-  console.log(gradient.atlas.multiline(logo));
-  console.log(`  \x1b[3m\x1b[90m${getRandomTagline()}\x1b[0m\n`);
+    // Load session if specified
+    if (sessionIdToLoad) {
+      const loaded = await agent.loadSession(sessionIdToLoad);
+      if (loaded) {
+        console.log(`\n  \x1b[32m✔\x1b[0m Restored session: ${sessionIdToLoad}`);
+      } else {
+        console.log(`\n  \x1b[31m✖\x1b[0m Failed to restore session: ${sessionIdToLoad}`);
+      }
+    }
+  }).catch((err) => {
+    console.error(`Init warning: ${err}`);
+  });
 
-  // Session Info
-  const finalSessionId = agent.getSessionId() || sessionId;
-  console.log(`  \x1b[90mSession\x1b[0m   \x1b[1mJim AI Coding Agent \x1b[36m${config.model}\x1b[0m`);
-  console.log(`  \x1b[90mContinue\x1b[0m  \x1b[1mjim -s ${finalSessionId}\x1b[0m\n`);
-  process.exit(0);
+  await instance.waitUntilExit();
+  await handleShutdown(0);
 }
 
 main().catch((err) => {

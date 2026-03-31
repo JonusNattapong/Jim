@@ -7,27 +7,41 @@ export interface ExtractionResult {
   interactiveElements: any;
 }
 
+interface TabInfo {
+  page: Page;
+  index: number;
+  title: string;
+  url: string;
+  active: boolean;
+}
+
 class BrowserService {
   private browser: Browser | null = null;
   private context: BrowserContext | null = null;
   private page: Page | null = null;
+  private pages: Page[] = [];
+  private activePageIndex: number = 0;
 
   async ensureBrowser() {
     if (!this.browser) {
       this.browser = await chromium.launch({
         headless: false,
-        args: ["--window-size=1440,900", "--disable-blink-features=AutomationControlled"],
+        args: [
+          "--window-size=1440,900",
+          "--disable-blink-features=AutomationControlled",
+        ],
       });
       this.context = await this.browser.newContext({
         viewport: { width: 1440, height: 900 },
-        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        userAgent:
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         recordVideo: {
           dir: path.join(process.cwd(), ".recordings"),
-          size: { width: 1440, height: 900 }
-        }
+          size: { width: 1440, height: 900 },
+        },
       });
       this.page = await this.context.newPage();
-      
+
       await this.page.addInitScript(() => {
         const style = document.createElement("style");
         style.innerHTML = `
@@ -89,30 +103,49 @@ class BrowserService {
     const page = await this.getPage();
     try {
       const urlStr = page.url();
-      await page.evaluate(({text, icon, url}) => {
-        let overlay = document.getElementById("jim-overlay") || document.createElement("div");
-        if (!overlay.id) {
-          overlay.id = "jim-overlay";
-          Object.assign(overlay.style, {
-            position: "fixed", inset: "0", border: "4px solid rgba(255, 149, 0, 0.4)",
-            pointerEvents: "none", zIndex: "999998", transition: "all 0.5s ease",
-          });
-          overlay.className = "jim-foggy-border";
-          document.body.appendChild(overlay);
-        }
+      await page.evaluate(
+        ({ text, icon, url }) => {
+          let overlay =
+            document.getElementById("jim-overlay") ||
+            document.createElement("div");
+          if (!overlay.id) {
+            overlay.id = "jim-overlay";
+            Object.assign(overlay.style, {
+              position: "fixed",
+              inset: "0",
+              border: "4px solid rgba(255, 149, 0, 0.4)",
+              pointerEvents: "none",
+              zIndex: "999998",
+              transition: "all 0.5s ease",
+            });
+            overlay.className = "jim-foggy-border";
+            document.body.appendChild(overlay);
+          }
 
-        let hud = document.getElementById("jim-hud") || document.createElement("div");
-        if (!hud.id) {
-          hud.id = "jim-hud";
-          Object.assign(hud.style, {
-            position: "fixed", bottom: "40px", left: "50%", transform: "translateX(-50%)",
-            background: "rgba(15, 15, 15, 0.95)", border: "1px solid #ff9500",
-            color: "white", padding: "12px 28px", borderRadius: "50px",
-            fontFamily: "Inter, system-ui", fontSize: "14px", fontWeight: "600",
-            boxShadow: "0 15px 45px rgba(0,0,0,0.8)", zIndex: "999999",
-            display: "flex", gap: "12px", alignItems: "center",
-          });
-          hud.innerHTML = `
+          let hud =
+            document.getElementById("jim-hud") || document.createElement("div");
+          if (!hud.id) {
+            hud.id = "jim-hud";
+            Object.assign(hud.style, {
+              position: "fixed",
+              bottom: "40px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              background: "rgba(15, 15, 15, 0.95)",
+              border: "1px solid #ff9500",
+              color: "white",
+              padding: "12px 28px",
+              borderRadius: "50px",
+              fontFamily: "Inter, system-ui",
+              fontSize: "14px",
+              fontWeight: "600",
+              boxShadow: "0 15px 45px rgba(0,0,0,0.8)",
+              zIndex: "999999",
+              display: "flex",
+              gap: "12px",
+              alignItems: "center",
+            });
+            hud.innerHTML = `
             <span id="jim-icon"></span>
             <span id="jim-text"></span>
             <span style="color:rgba(255,149,0,0.5);font-size:11px;margin-left:10px" id="jim-url"></span>
@@ -120,73 +153,104 @@ class BrowserService {
               <span style="width:6px;height:6px;background:#ff3b30;border-radius:50%;display:inline-block;animation:jim-rec-pulse 1s infinite"></span> REC
             </span>
           `;
-          document.body.appendChild(hud);
-        }
-        
-        const tEl = hud.querySelector("#jim-text");
-        const iEl = hud.querySelector("#jim-icon");
-        const uEl = hud.querySelector("#jim-url");
-        if (tEl) tEl.textContent = text;
-        if (iEl) iEl.textContent = icon;
-        if (uEl) uEl.textContent = url ? url.substring(0, 40) + "..." : "";
-      }, {text: status, icon, url: urlStr});
+            document.body.appendChild(hud);
+          }
+
+          const tEl = hud.querySelector("#jim-text");
+          const iEl = hud.querySelector("#jim-icon");
+          const uEl = hud.querySelector("#jim-url");
+          if (tEl) tEl.textContent = text;
+          if (iEl) iEl.textContent = icon;
+          if (uEl) uEl.textContent = url ? url.substring(0, 40) + "..." : "";
+        },
+        { text: status, icon, url: urlStr },
+      );
     } catch (e) {}
   }
 
   async clearHUD() {
     const page = await this.getPage();
-    await page.evaluate(() => {
-      const h = document.getElementById("jim-hud");
-      const o = document.getElementById("jim-overlay");
-      if (h) h.remove();
-      if (o) o.remove();
-    }).catch(() => {});
+    await page
+      .evaluate(() => {
+        const h = document.getElementById("jim-hud");
+        const o = document.getElementById("jim-overlay");
+        if (h) h.remove();
+        if (o) o.remove();
+      })
+      .catch(() => {});
   }
 
   async showRipple(x: number, y: number) {
     const page = await this.getPage();
-    await page.evaluate(({x, y}) => {
-      const r = document.createElement("div");
-      r.className = "jim-ripple-effect";
-      Object.assign(r.style, { left: x + "px", top: y + "px", width: "40px", height: "40px" });
-      document.body.appendChild(r);
-      setTimeout(() => r.remove(), 600);
-    }, {x, y}).catch(() => {});
+    await page
+      .evaluate(
+        ({ x, y }) => {
+          const r = document.createElement("div");
+          r.className = "jim-ripple-effect";
+          Object.assign(r.style, {
+            left: x + "px",
+            top: y + "px",
+            width: "40px",
+            height: "40px",
+          });
+          document.body.appendChild(r);
+          setTimeout(() => r.remove(), 600);
+        },
+        { x, y },
+      )
+      .catch(() => {});
   }
 
-  async highlight(selector: string, actionText: string = "Targeting", duration = 1200) {
+  async highlight(
+    selector: string,
+    actionText: string = "Targeting",
+    duration = 1200,
+  ) {
     const page = await this.getPage();
-    await page.evaluate(({sel, dur, text}) => {
-      const el = document.querySelector(sel) as HTMLElement;
-      if (el) {
-        el.classList.add("jim-element-highlight");
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
+    await page
+      .evaluate(
+        ({ sel, dur, text }) => {
+          const el = document.querySelector(sel) as HTMLElement;
+          if (el) {
+            el.classList.add("jim-element-highlight");
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
 
-        const label = document.createElement("div");
-        label.className = "jim-action-label";
-        label.textContent = text;
-        document.body.appendChild(label);
+            const label = document.createElement("div");
+            label.className = "jim-action-label";
+            label.textContent = text;
+            document.body.appendChild(label);
 
-        const updatePos = () => {
-          const rect = el.getBoundingClientRect();
-          label.style.left = (rect.left + window.scrollX) + "px";
-          label.style.top = (rect.top + window.scrollY) + "px";
-        };
-        updatePos();
-        
-        setTimeout(() => {
-          el.classList.remove("jim-element-highlight");
-          label.remove();
-        }, dur);
-      }
-    }, {sel: selector, dur: duration, text: actionText}).catch(() => {});
+            const updatePos = () => {
+              const rect = el.getBoundingClientRect();
+              label.style.left = rect.left + window.scrollX + "px";
+              label.style.top = rect.top + window.scrollY + "px";
+            };
+            updatePos();
+
+            setTimeout(() => {
+              el.classList.remove("jim-element-highlight");
+              label.remove();
+            }, dur);
+          }
+        },
+        { sel: selector, dur: duration, text: actionText },
+      )
+      .catch(() => {});
   }
 
   async click(selector: string, button: "left" | "right" | "middle" = "left") {
     const page = await this.getPage();
     await this.highlight(selector, "Clicking", 1200).catch(() => {});
-    const box = await page.locator(selector).first().boundingBox().catch(() => null);
-    if (box) await this.showRipple(box.x + box.width / 2, box.y + box.height / 2).catch(() => {});
+    const box = await page
+      .locator(selector)
+      .first()
+      .boundingBox()
+      .catch(() => null);
+    if (box)
+      await this.showRipple(
+        box.x + box.width / 2,
+        box.y + box.height / 2,
+      ).catch(() => {});
     await this.updateHUD(`Clicking...`, "🖱️");
     await page.click(selector, { button }).catch(() => {});
     await page.waitForLoadState("domcontentloaded").catch(() => {});
@@ -200,25 +264,33 @@ class BrowserService {
     await page.type(selector, text, { delay: 40 }).catch(() => {});
   }
 
-  async smoothScroll(direction: "up" | "down" | "top" | "bottom", amount?: number) {
+  async smoothScroll(
+    direction: "up" | "down" | "top" | "bottom",
+    amount?: number,
+  ) {
     const page = await this.getPage();
     await this.updateHUD(`Scrolling...`, "↕️");
-    await page.evaluate(({dir, amt}) => {
-      const d = amt || window.innerHeight * 0.7;
-      let t = window.scrollY;
-      if (dir === "top") t = 0;
-      else if (dir === "bottom") t = document.body.scrollHeight;
-      else if (dir === "up") t = Math.max(0, window.scrollY - d);
-      else t = window.scrollY + d;
-      window.scrollTo({ top: t, behavior: "smooth" });
-    }, {dir: direction, amt: amount}).catch(() => {});
+    await page
+      .evaluate(
+        ({ dir, amt }) => {
+          const d = amt || window.innerHeight * 0.7;
+          let t = window.scrollY;
+          if (dir === "top") t = 0;
+          else if (dir === "bottom") t = document.body.scrollHeight;
+          else if (dir === "up") t = Math.max(0, window.scrollY - d);
+          else t = window.scrollY + d;
+          window.scrollTo({ top: t, behavior: "smooth" });
+        },
+        { dir: direction, amt: amount },
+      )
+      .catch(() => {});
     await page.waitForTimeout(800);
   }
 
   async extractContent(): Promise<ExtractionResult> {
     const page = await this.getPage();
     await this.updateHUD("Extracting...", "🔍");
-    
+
     const extractionCode = `(() => {
       const getPath = (el) => {
         if (el.id) return '#' + CSS.escape(el.id);
@@ -271,15 +343,165 @@ class BrowserService {
       };
     })()`;
 
-    const data = await page.evaluate(extractionCode) as ExtractionResult;
+    const data = (await page.evaluate(extractionCode)) as ExtractionResult;
     return data;
   }
 
   async screenshot(filePath?: string) {
     const page = await this.getPage();
-    const p = filePath || path.join(process.cwd(), "screenshot-" + Date.now() + ".png");
+    const p =
+      filePath || path.join(process.cwd(), "screenshot-" + Date.now() + ".png");
     await page.screenshot({ path: p, fullPage: false });
     return p;
+  }
+
+  // Multi-tab support
+  async newTab(url: string): Promise<TabInfo> {
+    await this.ensureBrowser();
+    const newPage = await this.context!.newPage();
+    await newPage.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+    this.pages.push(newPage);
+    this.activePageIndex = this.pages.length - 1;
+    this.page = newPage;
+    const title = await newPage.title();
+    return {
+      page: newPage,
+      index: this.activePageIndex,
+      title,
+      url: newPage.url(),
+      active: true,
+    };
+  }
+
+  async switchTab(index?: number, titleMatch?: string): Promise<TabInfo> {
+    await this.ensureBrowser();
+    let targetIndex = index;
+
+    if (titleMatch !== undefined) {
+      for (let i = 0; i < this.pages.length; i++) {
+        const pageTitle = await this.pages[i].title();
+        if (pageTitle.toLowerCase().includes(titleMatch.toLowerCase())) {
+          targetIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (
+      targetIndex === undefined ||
+      targetIndex < 0 ||
+      targetIndex >= this.pages.length
+    ) {
+      throw new Error(`Tab not found: ${titleMatch || index}`);
+    }
+
+    this.activePageIndex = targetIndex;
+    this.page = this.pages[targetIndex];
+    await this.page.bringToFront();
+    const title = await this.page.title();
+
+    return {
+      page: this.page,
+      index: targetIndex,
+      title,
+      url: this.page.url(),
+      active: true,
+    };
+  }
+
+  async closeTab(index?: number): Promise<number> {
+    await this.ensureBrowser();
+    const closeIndex = index !== undefined ? index : this.activePageIndex;
+
+    if (closeIndex < 0 || closeIndex >= this.pages.length) {
+      throw new Error(`Tab index out of range: ${closeIndex}`);
+    }
+
+    const pageToClose = this.pages[closeIndex];
+    await pageToClose.close();
+    this.pages.splice(closeIndex, 1);
+
+    if (this.pages.length === 0) {
+      this.activePageIndex = 0;
+      this.page = null!;
+    } else {
+      if (this.activePageIndex >= this.pages.length) {
+        this.activePageIndex = this.pages.length - 1;
+      }
+      this.page = this.pages[this.activePageIndex];
+      await this.page.bringToFront();
+    }
+
+    return closeIndex;
+  }
+
+  async listTabs(): Promise<TabInfo[]> {
+    await this.ensureBrowser();
+    const tabs: TabInfo[] = [];
+    for (let i = 0; i < this.pages.length; i++) {
+      const p = this.pages[i];
+      tabs.push({
+        page: p,
+        index: i,
+        title: await p.title(),
+        url: p.url(),
+        active: i === this.activePageIndex,
+      });
+    }
+    return tabs;
+  }
+
+  // Wait for element
+  async waitForElement(
+    selector: string,
+    timeout: number = 30000,
+  ): Promise<void> {
+    const page = await this.getPage();
+    await page.waitForSelector(selector, { state: "visible", timeout });
+  }
+
+  // File upload
+  async uploadFile(selector: string, filePath: string): Promise<void> {
+    const page = await this.getPage();
+    const fileInput = await page.locator(selector);
+    await fileInput.setInputFiles(filePath);
+  }
+
+  // Performance metrics
+  async getMetrics(): Promise<any> {
+    const page = await this.getPage();
+    const metrics = await page.evaluate(() => {
+      const navigation = performance.getEntriesByType(
+        "navigation",
+      )[0] as PerformanceNavigationTiming;
+      const paint = performance.getEntriesByType("paint");
+      const firstPaint = paint.find((p) => p.name === "first-paint");
+      const firstContentfulPaint = paint.find(
+        (p) => p.name === "first-contentful-paint",
+      );
+
+      return {
+        url: window.location.href,
+        title: document.title,
+        loadTime: navigation
+          ? Math.round(navigation.loadEventEnd - navigation.startTime)
+          : null,
+        domContentLoaded: navigation
+          ? Math.round(
+              navigation.domContentLoadedEventEnd - navigation.startTime,
+            )
+          : null,
+        firstPaint: firstPaint ? Math.round(firstPaint.startTime) : null,
+        firstContentfulPaint: firstContentfulPaint
+          ? Math.round(firstContentfulPaint.startTime)
+          : null,
+        transferSize: navigation ? navigation.transferSize : null,
+        encodedBodySize: navigation ? navigation.encodedBodySize : null,
+        decodedBodySize: navigation ? navigation.decodedBodySize : null,
+        resourceCount: performance.getEntriesByType("resource").length,
+      };
+    });
+    return metrics;
   }
 }
 
