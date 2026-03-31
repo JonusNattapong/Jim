@@ -8,7 +8,9 @@ export interface CliUiState {
   favoriteProviders: string[];
   recentConnections: string[];
   favoriteConnections: string[];
+  promptHistory: string[];
   themeId: string;
+  showHeader: boolean;
 }
 
 const DEFAULT_STATE: CliUiState = {
@@ -18,7 +20,9 @@ const DEFAULT_STATE: CliUiState = {
   favoriteProviders: [],
   recentConnections: [],
   favoriteConnections: [],
+  promptHistory: [],
   themeId: "sunset",
+  showHeader: true,
 };
 
 function getUiStatePath(projectRoot: string): string {
@@ -37,7 +41,9 @@ export function loadCliUiState(projectRoot: string): CliUiState {
       favoriteProviders: raw.favoriteProviders ?? [],
       recentConnections: raw.recentConnections ?? [],
       favoriteConnections: raw.favoriteConnections ?? [],
+      promptHistory: raw.promptHistory ?? [],
       themeId: raw.themeId ?? "sunset",
+      showHeader: raw.showHeader ?? true,
     };
   } catch {
     return { ...DEFAULT_STATE };
@@ -58,4 +64,13 @@ export function toggleFavorite(list: string[], value: string): string[] {
   return list.includes(value)
     ? list.filter((item) => item !== value)
     : [value, ...list];
+}
+
+export function pushPromptHistory(list: string[], value: string, max = 50): string[] {
+  const normalized = value.trim();
+  if (!normalized) {
+    return list;
+  }
+
+  return [normalized, ...list.filter((item) => item !== normalized)].slice(0, max);
 }

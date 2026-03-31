@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Box, Text, useInput, useApp } from "ink";
+import { Box, Text, useInput, useApp, useStdout } from "ink";
 import TextInput from "ink-text-input";
 import { Header } from "./components/Header.js";
 import { Message } from "./components/Message.js";
@@ -16,16 +16,41 @@ import { ConnectModal } from "./components/ConnectModal.js";
 import { StatsView } from "./components/StatsView.js";
 import { ConfigView } from "./components/ConfigView.js";
 import { ThoughtProcess } from "./components/ThoughtProcess.js";
+import { SubAgentCard } from "./components/SubAgentCard.js";
+import { ProgressBar } from "./components/ProgressBar.js";
 import { Agent } from "../agent/index.js";
+import type { SubAgentStatus } from "../agent/subagent.js";
 import type { AgentCallbacks } from "../agent/index.js";
+import handleMcpCommand from "./mcpCommand.js";
 import type { PermissionMode } from "../permissions/manager.js";
 import { loadCliUiState, pushRecent, saveCliUiState, toggleFavorite } from "./ui-state.js";
 import { formatProviderDescription, formatConnectionListItem } from "../config/provider-presets.js";
 import { theme, setTheme, THEME_LIST } from "./theme.js";
+import { useVirtualScroll } from "./hooks/useVirtualScroll.js";
+import { usePromptHistory } from "./hooks/usePromptHistory.js";
+import { updateTaskStatusStore } from "./stores/taskStatusStore.js";
+import { initializePromptHistoryStore, pushPromptHistoryStore, usePromptHistorySnapshot } from "./stores/promptHistoryStore.js";
+import { useSessionSummarySnapshot } from "./stores/sessionSummaryStore.js";
+import type { SessionSummary } from "../context/sessions.js";
 
 // Initialize theme on first load
 const initialState = loadCliUiState(process.cwd());
 setTheme(initialState.themeId);
+
+function formatDuration(ms: number): string {
+  const sec = Math.floor(ms / 1000);
+  const min = Math.floor(sec / 60);
+  const hr = Math.floor(min / 60);
+  if (hr > 0) return `${hr}h ${min % 60}m`;
+  if (min > 0) return `${min}m ${sec % 60}s`;
+  return `${sec}s`;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
 
 // ─── Types ─────────────────────────────────────────────
 
@@ -34,7 +59,7 @@ const COMMANDS = [
   { cmd: "model", desc: "Show or change AI model" },
   { cmd: "models", desc: "List available models" },
   { cmd: "provider", desc: "Show current provider service or adapter" },
-  { cmd: "providers", desc: "Pick a provider service (OpenCode, OpenRouter, OpenRouter, etc.)" },
+  { cmd: "providers", desc: "Pick a provider service (OpenCode, OpenRouter, etc.)" },
   { cmd: "adapters", desc: "Pick a technical provider adapter (OpenAI, Anthropic, etc.)" },
   { cmd: "connect", desc: "Connect a provider service by ID" },
   { cmd: "connections", desc: "List all available provider services" },
@@ -44,6 +69,8 @@ const COMMANDS = [
   { cmd: "modes", desc: "Pick a work mode interactively" },
   { cmd: "learn", desc: "Add fact to memory" },
   { cmd: "rules", desc: "Show conditional rules" },
+  { cmd: "stop", desc: "Abort the current running task" },
+  { cmd: "header", desc: "Toggle the ASCII header visibility" },
   { cmd: "compact", desc: "Compact conversation context" },
   { cmd: "stream", desc: "Toggle streaming mode" },
   { cmd: "sessions", desc: "List saved sessions" },
@@ -54,10 +81,17 @@ const COMMANDS = [
   { cmd: "restore", desc: "Restore a checkpoint" },
   { cmd: "themes", desc: "Pick a UI color theme" },
   { cmd: "plugins", desc: "Browse plugin groups" },
+  { cmd: "doctor", desc: "Run diagnostic checks (doctor)" },
+  { cmd: "tool-results", desc: "List persisted tool outputs" },
+  { cmd: "tool-retrieve", desc: "Retrieve persisted tool output by reference" },
+  { cmd: "session-memory", desc: "Show session memory items" },
   { cmd: "history", desc: "Show message stats" },
   { cmd: "stats", desc: "Show usage statistics" },
   { cmd: "config", desc: "Show current config" },
   { cmd: "memory", desc: "Show memory layers" },
+  { cmd: "queue", desc: "Show pending messages queue" },
+  { cmd: "next", desc: "Process next item in queue" },
+  { cmd: "browser", desc: "Show active browser status" },
   { cmd: "approve", desc: "Approve the current proposed plan" },
   { cmd: "yolo", desc: "Toggle YOLO mode: bypass all safety checks" },
   { cmd: "ollaman", desc: "Toggle Ollaman for background tasks" },
@@ -89,14 +123,17 @@ interface SelectorItem {
   value: string;
   description?: string;
   keywords?: string[];
+  preview?: string;
+  previewLines?: number;
 }
 
 interface SelectorState {
-  type: "model" | "provider" | "connection" | "session" | "checkpoint" | "choice" | "plugin" | "mode";
+  type: "model" | "provider" | "connection" | "session" | "checkpoint" | "choice" | "plugin" | "mode" | "history";
   title: string;
   items: SelectorItem[];
   favoritesKey?: "favoriteModels" | "favoriteProviders" | "favoriteConnections";
   recentsKey?: "recentModels" | "recentProviders" | "recentConnections";
+  recents?: string[];
   onSelect: (value: string) => Promise<void> | void;
 }
 
@@ -140,8 +177,45 @@ const mapOpenAiToUiMessages = (messages: any[]): ChatMessage[] => {
     });
 };
 
+function formatRelativeTime(iso: string): string {
+  const delta = Math.max(0, Date.now() - new Date(iso).getTime());
+  const sec = Math.floor(delta / 1000);
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  return `${day}d ago`;
+}
+
+function buildSessionPickerItems(sessions: SessionSummary[]): SelectorItem[] {
+  return sessions.map((session) => {
+    const role = session.lastMessageRole ?? "system";
+    const roleLabel = role === "assistant" ? "assistant" : role === "user" ? "you" : "system";
+    const relative = formatRelativeTime(session.updatedAt);
+    return {
+      label: `${session.sameProject ? "[this project] " : "[other] "}${session.id.slice(0, 15)}... | ${session.turnCount} turns | ${relative}`,
+      value: session.id,
+      description: `${roleLabel} · ${session.projectRoot}`,
+      preview: session.lastMessageSnippet ?? "No messages yet",
+      previewLines: 5,
+      keywords: [session.projectRoot, roleLabel, relative, session.id],
+    };
+  });
+}
+
 export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, initialStreaming }) => {
   const { exit } = useApp();
+  const { stdout } = useStdout();
+  const [columns, setColumns] = React.useState(stdout?.columns || 80);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  React.useEffect(() => {
+    const handleResize = () => setColumns(stdout?.columns || 80);
+    stdout?.on("resize", handleResize);
+    return () => { stdout?.off("resize", handleResize); };
+  }, [stdout]);
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => mapOpenAiToUiMessages(agent.getConversationHistory()));
   const [autoApprove, setAutoApprove] = useState(false);
@@ -163,8 +237,18 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
   const [showConfig, setShowConfig] = useState(false);
   const [connectModal, setConnectModal] = useState<ConnectModalState | null>(null);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
+  const [processingProgress, setProcessingProgress] = useState<{ message: string; percent: number } | null>(null);
   const [uiState, setUiState] = useState(() => loadCliUiState(agent.getProjectRoot()));
   const [thoughtProcess, setThoughtProcess] = useState("");
+  const [subAgents, setSubAgents] = useState<Record<string, SubAgentStatus>>({});
+  const promptHistorySnapshot = usePromptHistorySnapshot();
+  const sessionSummarySnapshot = useSessionSummarySnapshot(agent.getProjectRoot());
+
+  // Deferred values for smoother streaming interaction
+  const deferredStreamBuffer = React.useDeferredValue(streamBuffer);
+  const deferredThoughtProcess = React.useDeferredValue(thoughtProcess);
+  const deferredMessages = React.useDeferredValue(messages);
+  const deferredInput = React.useDeferredValue(input);
 
   // Reset suggestion scroll when typing
   useEffect(() => {
@@ -178,10 +262,24 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
     }
   }, [input]);
 
+  useEffect(() => {
+    updateTaskStatusStore(activeTools);
+  }, [activeTools]);
+
+  useEffect(() => {
+    initializePromptHistoryStore(uiState.promptHistory);
+  }, [uiState.promptHistory]);
+
   const persistUiState = useCallback((next: ReturnType<typeof loadCliUiState>) => {
     setUiState(next);
     saveCliUiState(agent.getProjectRoot(), next);
   }, [agent]);
+
+  const promptHistory = usePromptHistory({
+    entries: promptHistorySnapshot.entries,
+    input,
+    setInput,
+  });
 
   const handleSelect = useCallback(async (item: { value: string }) => {
     if (!selector) {
@@ -209,6 +307,25 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       case "quit": case "exit":
         await agent.close();
         exit();
+        return;
+
+      case "stop":
+        if (isProcessing && abortControllerRef.current) {
+          abortControllerRef.current.abort();
+          setCmdOutput({ type: "info", content: "🚫 Task aborted by user." });
+          setIsProcessing(false);
+          setProcessingProgress(null);
+        } else {
+          setCmdOutput({ type: "info", content: "No task is currently running." });
+        }
+        return;
+
+      case "header":
+        {
+          const next = { ...uiState, showHeader: !uiState.showHeader };
+          persistUiState(next);
+          setCmdOutput({ type: "info", content: `Header is now ${next.showHeader ? "on" : "off"}.` });
+        }
         return;
 
       case "reset":
@@ -465,19 +582,6 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
           return;
         }
 
-      case "connections": {
-        const presets = agent.getProviderPresets();
-        const currentPresetId = agent.getProviderPreset();
-        setCmdOutput({
-          type: "list",
-          content: "Provider presets:",
-          items: presets.map((preset) =>
-            formatConnectionListItem(preset, currentPresetId === preset.id, preset.configured)
-          ),
-        });
-        return;
-      }
-
       case "workmode":
         if (args) {
           agent.setWorkMode(args as "architect" | "ask" | "code");
@@ -520,17 +624,14 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       }
 
       case "sessions": {
-        const sessions = await agent.listSessions();
+        const sessions = sessionSummarySnapshot.sessions;
         if (sessions.length === 0) {
           setCmdOutput({ type: "info", content: "No saved sessions." });
         } else {
           setSelector({
             type: "session",
-            title: "Select session",
-            items: sessions.map(s => ({ 
-              label: `${s.id.slice(0, 15)}... | ${s.turnCount} turns | ${new Date(s.updatedAt).toLocaleTimeString()}`, 
-              value: s.id 
-            })),
+            title: "Select session (this project first)",
+            items: buildSessionPickerItems(sessions),
             async onSelect(value) {
               const ok = await agent.loadSession(value);
               setMode(agent.getPermissionMode());
@@ -621,9 +722,34 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
         return;
 
       case "history":
+        if (args === "search") {
+          if (promptHistorySnapshot.entries.length === 0) {
+            setCmdOutput({ type: "info", content: "Prompt history is empty." });
+            return;
+          }
+          setSelector({
+            type: "history",
+            title: "Search prompt history",
+            recents: promptHistorySnapshot.entries,
+            items: promptHistorySnapshot.entries.map((entry, index) => ({
+              label: entry.split("\n")[0] || entry,
+              value: entry,
+              description: index === 0 ? "Latest prompt" : `${index + 1} prompts ago`,
+              keywords: entry.split(/\s+/g).slice(0, 12),
+              preview: entry,
+              previewLines: 6,
+            })),
+            onSelect(value) {
+              promptHistory.reset();
+              setInput(value);
+              setCmdOutput({ type: "info", content: "Prompt restored from history." });
+            },
+          });
+          return;
+        }
         setCmdOutput({
           type: "info",
-          content: `Messages: ${agent.getConversationHistory().length} | Turn: ${agent.getTurnCount()} | Session: ${agent.getSessionId()}`,
+          content: `Messages: ${agent.getConversationHistory().length} | Turn: ${agent.getTurnCount()} | Session: ${agent.getSessionId()} | Prompt history: ${promptHistorySnapshot.entries.length}`,
         });
         return;
 
@@ -659,6 +785,112 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
         return;
       }
 
+      case "doctor": {
+        setCmdOutput({ type: "info", content: "Running diagnostics..." });
+        try {
+          const social = await agent.runTool("social_doctor");
+          const office = await agent.runTool("office_doctor");
+          const out = `${social?.content ?? ""}\n\n${office?.content ?? ""}`;
+          setCmdOutput({ type: "info", content: out.slice(0, 12000) });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setCmdOutput({ type: "error", content: `Doctor failed: ${msg}` });
+        }
+        return;
+      }
+
+      case "mcp": {
+        try {
+          const res = await handleMcpCommand(agent, args);
+          if (res.type === "list") setCmdOutput({ type: "list", content: res.content, items: res.items });
+          else if (res.type === "info") setCmdOutput({ type: "info", content: res.content });
+          else if (res.type === "success") setCmdOutput({ type: "success", content: res.content });
+          else setCmdOutput({ type: "error", content: res.content });
+        } catch (err) {
+          setCmdOutput({ type: "error", content: `/mcp failed: ${String(err)}` });
+        }
+        return;
+      }
+
+      case "tool-results": {
+        setCmdOutput({ type: "info", content: "Fetching persisted tool results..." });
+        const list = await agent.listToolResults();
+        if (Array.isArray(list)) {
+          if (list.length === 0) {
+            setCmdOutput({ type: "info", content: "No persisted tool results." });
+          } else {
+            setCmdOutput({ type: "list", content: `Persisted tool results (${list.length})`, items: list.map(l => `${l.reference} | ${l.toolName} | ${formatBytes(l.size)} | ${new Date(l.timestamp).toLocaleString()}`) });
+          }
+        } else {
+          setCmdOutput({ type: "info", content: `Persisted tool results summary: ${list.totalResults ?? 0}` });
+        }
+        return;
+      }
+
+      case "tool-retrieve": {
+        if (!args) {
+          setCmdOutput({ type: "info", content: "Usage: /tool-retrieve <tool-result://...>" });
+          return;
+        }
+        setCmdOutput({ type: "info", content: `Retrieving ${args}...` });
+        const text = await agent.retrieveToolResult(args);
+        if (!text) {
+          setCmdOutput({ type: "error", content: `Could not retrieve: ${args}` });
+        } else {
+          setCmdOutput({ type: "info", content: text.slice(0, 8000) });
+        }
+        return;
+      }
+
+      case "session-memory": {
+        const entries = agent.getSessionMemories(200);
+        if (!entries || entries.length === 0) {
+          setCmdOutput({ type: "info", content: "No session memory items." });
+        } else {
+          const q = args?.toLowerCase?.() ?? "";
+          const filtered = q ? entries.filter(e => e.content.toLowerCase().includes(q) || (e.tags ?? []).some(t => t.includes(q))) : entries;
+          setCmdOutput({ type: "list", content: `Session memory (${filtered.length})`, items: filtered.map(m => `${m.id} | ${m.type} | ${m.tags?.join(",") ?? ""} | ${m.content.slice(0, 120).replace(/\n/g, " ")}`) });
+        }
+        return;
+      }
+
+      case "queue": {
+        const { getPendingMessagesQueue } = await import("../services/pending-messages.js");
+        const q = getPendingMessagesQueue();
+        setCmdOutput({ type: "info", content: q.format() });
+        return;
+      }
+
+      case "next": {
+        const { getPendingMessagesQueue } = await import("../services/pending-messages.js");
+        const q = getPendingMessagesQueue();
+        const next = q.getNext();
+        if (!next) {
+          setCmdOutput({ type: "info", content: "Queue is empty. No pending tasks." });
+        } else {
+          setCmdOutput({ type: "success", content: `🚀 Starting next task: "${next.content.slice(0, 60)}..."` });
+          // We trigger handleSubmit to actually run the task
+          q.markProcessing(next.id);
+          handleSubmit(next.content).then(() => {
+             q.markCompleted(next.id);
+          });
+        }
+        return;
+      }
+
+      case "browser": {
+        const { browserService } = await import("../tools/browser_service.js");
+        const page = await browserService.getPage().catch(() => null);
+        if (!page) {
+           setCmdOutput({ type: "info", content: "Browser is not running." });
+        } else {
+           const url = page.url();
+           const title = await page.title();
+           setCmdOutput({ type: "success", content: `🌍 **Browser Active**\nURL: ${url}\nTitle: ${title}` });
+        }
+        return;
+      }
+
       case "help":
         setCmdOutput({
           type: "list",
@@ -688,11 +920,19 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
             "/restore <id>     Restore checkpoint",
             "/themes           Pick a UI color theme",
             "/plugins          Browse plugin catalog",
+            "/doctor           Run diagnostics (social + office checks)",
+            "/tool-results     List persisted tool outputs",
+            "/tool-retrieve <ref>  Retrieve persisted tool output by reference",
+            "/session-memory [query]   Show session memory items (optional query)",
             "/hooks            List hooks",
             "/memory           Show memory",
             "/config           Show config",
             "/stats            Show usage statistics",
+            "/queue            Show pending messages queue",
+            "/next             Process next item in queue",
+            "/browser          Show active browser status",
             "/history          Message stats",
+            "/history search   Search prompt history",
             "/approve          APPROVE the current plan",
             "/yolo             Toggle YOLO mode (bypass all safety)",
             "/ollaman [model]  Toggle background Ollaman",
@@ -749,14 +989,31 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       default:
         setCmdOutput({ type: "error", content: `Unknown command: /${cmd}` });
     }
-  }, [agent, exit, mode, streaming, workMode, apiMode]);
+  }, [agent, exit, mode, streaming, workMode, apiMode, promptHistory, promptHistorySnapshot.entries, sessionSummarySnapshot.sessions]);
 
   // ─── Agent Run ───────────────────────────────────────
 
   const handleSubmit = useCallback(async (value: string) => {
     const trimmed = value.trim();
-    if (!trimmed || isProcessing) return;
+    if (!trimmed) return;
+    
+    // Allow slash commands even when processing
+    if (isProcessing && !trimmed.startsWith("/")) {
+      // Queue regular messages instead of ignoring them
+      const { getPendingMessagesQueue } = await import("../services/pending-messages.js");
+      const q = getPendingMessagesQueue();
+      q.add(trimmed, "normal");
+      setCmdOutput({ type: "info", content: "📥 Message queued! Jim will address this after finishing the current task." });
+      setInput("");
+      return;
+    }
 
+    const nextUiState = {
+      ...uiState,
+      promptHistory: pushPromptHistoryStore(trimmed),
+    };
+    persistUiState(nextUiState);
+    promptHistory.reset();
     setInput("");
     setCmdOutput(null);
 
@@ -772,6 +1029,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
     setStartTime(Date.now());
     setActiveTools([]);
     setStreamBuffer("");
+    setSubAgents({});
 
     setThoughtProcess("");
 
@@ -850,13 +1108,59 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       onHookFired(event, output) {
         setMessages(prev => [...prev, { role: "system", content: `Hook [${event}]: ${output}` }]);
       },
+      onSubAgentStatus(status) {
+        setSubAgents(prev => {
+          const old = prev[status.id];
+          if (old && status.cost > old.cost) {
+            const diff = status.cost - old.cost;
+            // Note: This is a bit tricky since we are inside a hook's callback 
+            // but we want to update the agent's internal cost tracker.
+            // For simplicity and immediate parity, we'll let the UI handle the display 
+            // and the agent will track its own turns.
+          }
+          return { ...prev, [status.id]: status };
+        });
+      },
+      onProgress(message, percent) {
+        setProcessingProgress({ message, percent });
+      },
       onSessionSaved() {
         // silent
+      },
+      onInfo(content) {
+        setMessages(prev => [...prev, { role: "system", content }]);
       },
     };
 
     try {
-      const response = await agent.run(trimmed, callbacks);
+      let finalResponse = "";
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      const generator = agent.run(trimmed, callbacks, controller.signal);
+
+      for await (const event of generator) {
+        if (controller.signal.aborted) break;
+        switch (event.type) {
+          case "thinking":
+            if (event.content && !["[Compacting context...]", "[Rate limited, waiting 5s...]", "[Generating repository map...]"].includes(event.content)) {
+              setThoughtProcess(prev => prev ? prev + "\n" + event.content : event.content);
+            }
+            break;
+          case "info":
+            setMessages(prev => [...prev, { role: "system", content: event.content }]);
+            break;
+          case "stream_chunk":
+            setStreamBuffer(prev => prev + event.chunk);
+            setThoughtProcess(prev => prev + event.chunk);
+            break;
+          case "error":
+            setMessages(prev => [...prev, { role: "system", content: `Error: ${event.message}` }]);
+            break;
+          case "done":
+            finalResponse = event.content;
+            break;
+        }
+      }
 
       // Finalize tools into the user's message
       setActiveTools(current => {
@@ -873,19 +1177,19 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       });
 
       // Add assistant response
-      if (response && !response.startsWith("Error:")) {
+      if (finalResponse && !finalResponse.startsWith("Error:")) {
         if (!streaming) {
-          // Hacker Typewriter Effect
+          // Hacker Typewriter Effect (only if response wasn't already streamed)
           setStreamBuffer("");
           const chunkSize = 3;
-          for (let i = 0; i < response.length; i += chunkSize) {
-            setStreamBuffer(prev => prev + response.slice(i, i + chunkSize));
+          for (let i = 0; i < finalResponse.length; i += chunkSize) {
+            setStreamBuffer(prev => prev + finalResponse.slice(i, i + chunkSize));
             await new Promise(r => setTimeout(r, 25)); // Smooth terminal typewriter speed
           }
         }
-        setMessages(prev => [...prev, { role: "assistant", content: response }]);
-      } else if (response?.startsWith("Error:")) {
-        setMessages(prev => [...prev, { role: "system", content: response }]);
+        setMessages(prev => [...prev, { role: "assistant", content: finalResponse }]);
+      } else if (finalResponse?.startsWith("Error:")) {
+        setMessages(prev => [...prev, { role: "system", content: finalResponse }]);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -895,8 +1199,9 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       setStartTime(null);
       setStreamBuffer("");
       setThoughtProcess("");
+      setProcessingProgress(null);
     }
-  }, [agent, isProcessing, handleCommand, streaming, streamBuffer]);
+  }, [agent, isProcessing, handleCommand, persistUiState, promptHistory, streaming, streamBuffer, uiState]);
 
   // ─── Permission input ────────────────────────────────
 
@@ -912,11 +1217,72 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
     setPermRequest(null);
   }, [permRequest]);
 
+  // Use virtual scroll for the main list - keep last 50 messages
+  const virtualHistory = useVirtualScroll(deferredMessages, 50);
+  const displayMessages = virtualHistory.items;
+
   // ─── Ctrl+C ──────────────────────────────────────────
 
   useInput((_input, key) => {
     if (key.ctrl && _input === "c") {
       void agent.close().finally(() => exit());
+    }
+
+    if (key.ctrl && _input === "r" && !permRequest && !selector && !connectModal && !showConfig && !showStats && !isProcessing) {
+      if (promptHistorySnapshot.entries.length === 0) {
+        setCmdOutput({ type: "info", content: "Prompt history is empty." });
+        return;
+      }
+
+      setSelector({
+        type: "history",
+        title: "Search prompt history",
+        recents: promptHistorySnapshot.entries,
+        items: promptHistorySnapshot.entries.map((entry, index) => ({
+          label: entry.split("\n")[0] || entry,
+          value: entry,
+          description: index === 0 ? "Latest prompt" : `${index + 1} prompts ago`,
+          keywords: entry.split(/\s+/g).slice(0, 12),
+          preview: entry,
+          previewLines: 6,
+        })),
+        onSelect(value) {
+          promptHistory.reset();
+          setInput(value);
+          setCmdOutput({ type: "info", content: "Prompt restored from history." });
+        },
+      });
+      return;
+    }
+
+    if (!permRequest && !selector && !connectModal && !showConfig && !showStats && !isProcessing) {
+      const parts = input.split(" ");
+      let suggestionCount = 0;
+      if (input.startsWith("/")) {
+        if (parts.length === 1) {
+          suggestionCount = COMMANDS.filter(c => ("/" + c.cmd).startsWith(input.toLowerCase())).slice(0, 20).length;
+        } else if (parts.length === 2) {
+          const cmd = parts[0].toLowerCase();
+          const argPrefix = parts[1].toLowerCase();
+
+          if (cmd === "/mode") {
+            suggestionCount = ["plan", "edit", "ask"].filter(m => m.startsWith(argPrefix)).length;
+          } else if (cmd === "/workmode") {
+            suggestionCount = ["architect", "ask", "code"].filter(m => m.startsWith(argPrefix)).length;
+          } else if (cmd === "/api" || cmd === "/provider") {
+            suggestionCount = ["auto", "openai", "openai-compatible"].filter(m => m.startsWith(argPrefix)).length;
+          }
+        }
+      }
+
+      if (suggestionCount === 0) {
+        if (key.upArrow && promptHistory.navigateUp()) {
+          return;
+        }
+        if (key.downArrow && promptHistory.navigateDown()) {
+          return;
+        }
+      }
     }
 
     // Command/Arg suggestion navigation
@@ -926,7 +1292,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       
       if (parts.length === 1) {
         // Command suggestions
-        const filtered = COMMANDS.filter(c => ("/" + c.cmd).startsWith(input.toLowerCase())).slice(0, 5);
+        const filtered = COMMANDS.filter(c => ("/" + c.cmd).startsWith(input.toLowerCase())).slice(0, 20);
         suggestions = filtered.map(c => ({ label: "/" + c.cmd, value: "/" + c.cmd + " ", desc: c.desc }));
       } else if (parts.length === 2) {
         // Argument suggestions
@@ -963,42 +1329,56 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
   });
 
   const pickerFavorites = selector?.favoritesKey ? uiState[selector.favoritesKey] : [];
-  const pickerRecents = selector?.recentsKey ? uiState[selector.recentsKey] : [];
+  const pickerRecents = selector?.recentsKey ? uiState[selector.recentsKey] : (selector?.recents ?? []);
+  const selectorItems = selector?.type === "session"
+    ? buildSessionPickerItems(sessionSummarySnapshot.sessions)
+    : (selector?.items as SearchablePickerItem[] | undefined);
 
   // ─── Render ──────────────────────────────────────────
 
-  const liveTokens = agent.getEstimatedTokens() + Math.floor(streamBuffer.length / 4);
+  const liveTokens = agent.getEstimatedTokens() + Math.floor(deferredStreamBuffer.length / 4);
 
   return (
     <Box flexDirection="column" padding={1}>
-      <Header 
-        model={model} 
-        mode={mode} 
-        workMode={workMode}
-        streaming={streaming} 
-        tokens={liveTokens} 
-        projectRoot={agent.getProjectRoot()}
-        username={process.env.USER || process.env.USERNAME || "Engineer"}
-        yolo={autoApprove}
-      />
+      {uiState.showHeader && (
+        <Header 
+          model={model} 
+          mode={mode} 
+          workMode={workMode}
+          streaming={streaming} 
+          tokens={liveTokens} 
+          projectRoot={agent.getProjectRoot()}
+          username={process.env.USER || process.env.USERNAME || "Engineer"}
+          yolo={autoApprove}
+        />
+      )}
 
       {/* Messages */}
-      {messages.map((msg, i) => (
+      {React.useMemo(() => displayMessages.map((msg, i) => (
         <Box key={i} flexDirection="column">
           <Message role={msg.role} content={msg.content} />
           {msg.toolCalls && <ToolActivity calls={msg.toolCalls} />}
         </Box>
-      ))}
-
+      )), [displayMessages])}
+ 
       {/* Active tool calls (while processing) */}
       {isProcessing && activeTools.length > 0 && (
         <ToolActivity calls={activeTools} />
       )}
 
+      {/* Sub-agents activity */}
+      {Object.values(subAgents).length > 0 && (
+        <Box flexDirection="column">
+          {Object.values(subAgents).map((status) => (
+            <SubAgentCard key={status.id} status={status} />
+          ))}
+        </Box>
+      )}
+ 
       {/* Thought process (faded gray) - show when streaming or thinking */}
-      {isProcessing && thoughtProcess && !permRequest && (
+      {isProcessing && deferredThoughtProcess && !permRequest && (
         <ThoughtProcess
-          content={thoughtProcess}
+          content={deferredThoughtProcess}
           isStreaming={streaming && activeTools.length === 0}
           elapsed={startTime ? Math.floor((Date.now() - startTime) / 1000) : 0}
           tokens={liveTokens}
@@ -1038,18 +1418,45 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
             { key: "api", label: "Provider mode", value: apiMode, type: "enum", options: ["auto", "openai", "openai-compatible"] },
             { key: "baseUrl", label: "Base URL", value: agent.getBaseUrl(), type: "string" },
           ]}
+          status={{
+            nodeVersion: process.version,
+            platform: process.platform,
+            uptime: formatDuration(Date.now() - (startTime ?? Date.now())),
+            memoryMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+            projectRoot: agent.getProjectRoot(),
+            provider: agent.getProviderPreset() ?? "default",
+            adapter: apiMode,
+          }}
+          usage={{
+            tokens: liveTokens,
+            messages: messages.length,
+            turns: messages.filter(m => m.role === "user").length,
+            sessionDuration: startTime ? formatDuration(Date.now() - startTime) : "0m",
+            model,
+          }}
         />
       )}
 
       {/* Streaming buffer - hidden when thought process is active */}
-      {streaming && streamBuffer && isProcessing && !thoughtProcess && (
+      {streaming && deferredStreamBuffer && isProcessing && !deferredThoughtProcess && (
         <Box marginTop={1} flexDirection="row">
           <Box flexDirection="column" marginRight={1}>
             <Text color={theme.secondary}>▌</Text>
           </Box>
           <Box flexDirection="column" flexShrink={1}>
-            <Text>{streamBuffer}</Text>
+            <Text>{deferredStreamBuffer}</Text>
           </Box>
+        </Box>
+      )}
+
+      {/* Progress Bar */}
+      {processingProgress && (
+        <Box borderStyle="round" borderColor={theme.primary} paddingX={1} marginY={0}>
+          <ProgressBar 
+            label={processingProgress.message} 
+            percent={processingProgress.percent} 
+            color={theme.primary} 
+          />
         </Box>
       )}
 
@@ -1081,23 +1488,32 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
         turn={agent.getTurnCount()}
         messageCount={agent.getConversationHistory().length}
         sessionId={agent.getSessionId()}
+        showHeader={uiState.showHeader}
+        columns={columns}
       />
       <StatusInfo
         turn={agent.getTurnCount()}
         messageCount={agent.getConversationHistory().length}
         sessionId={agent.getSessionId()}
+        model={model}
+        projectRoot={agent.getProjectRoot()}
+        tokens={liveTokens}
+        cost={((liveTokens / 1_000_000) * 3.00).toFixed(4)}
+        streaming={streaming}
+        showHeader={uiState.showHeader}
+        columns={columns}
       />
 
       {/* Suggestion overlay */}
-      {input.startsWith("/") && (
-        <Box flexDirection="column" marginLeft={2} marginTop={1}>
+      {deferredInput.startsWith("/") && (
+        <Box flexDirection="column" marginLeft={2} marginTop={0}>
           {(() => {
-            const parts = input.split(" ");
+            const parts = deferredInput.split(" ");
             let suggestions: { label: string; desc?: string }[] = [];
             
             if (parts.length === 1) {
-              suggestions = COMMANDS.filter(c => ("/" + c.cmd).startsWith(input.toLowerCase()))
-                .slice(0, 5).map(c => ({ label: "/" + c.cmd, desc: c.desc }));
+              suggestions = COMMANDS.filter(c => ("/" + c.cmd).startsWith(deferredInput.toLowerCase()))
+                .slice(0, 20).map(c => ({ label: "/" + c.cmd, desc: c.desc }));
             } else if (parts.length === 2) {
               const cmd = parts[0].toLowerCase();
               const arg = parts[1].toLowerCase();
@@ -1124,7 +1540,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       {selector && (
         <SearchablePicker
           title={selector.title}
-          items={selector.items as SearchablePickerItem[]}
+          items={selectorItems ?? []}
           favorites={pickerFavorites}
           recents={pickerRecents}
           onCancel={() => setSelector(null)}
@@ -1171,8 +1587,20 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
             value={input}
             onChange={setInput}
             onSubmit={handleSubmit}
-            placeholder={isProcessing ? "" : "ask jim anything..."}
+            placeholder={isProcessing ? "ask next or use /command..." : "ask jim anything..."}
           />
+        </Box>
+      )}
+      {!permRequest && !selector && !connectModal && !showConfig && !showStats && !isProcessing && promptHistorySnapshot.entries.length > 0 && !input.startsWith("/") && (
+        <Box marginLeft={2}>
+          <Text dimColor>↑/↓ history · ctrl+r search · {promptHistorySnapshot.entries[0]}</Text>
+        </Box>
+      )}
+      {!permRequest && !selector && !connectModal && !showConfig && !showStats && !isProcessing && sessionSummarySnapshot.latestSameProject && agent.getTurnCount() === 0 && (
+        <Box marginLeft={2}>
+          <Text dimColor>
+            resume hint · {sessionSummarySnapshot.latestSameProject.id.slice(0, 14)}... · {sessionSummarySnapshot.latestSameProject.turnCount} turns · {formatRelativeTime(sessionSummarySnapshot.latestSameProject.updatedAt)}
+          </Text>
         </Box>
       )}
     </Box>

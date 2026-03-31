@@ -290,6 +290,30 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     ],
     notes: "Requires Ollama to be running locally (`ollama serve`)."
   },
+  {
+    id: "scaleway",
+    label: "Scaleway",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "Scaleway Generative AI models.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "API key", { envVar: "SCALEWAY_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { envVar: "SCALEWAY_BASE_URL", defaultValue: "https://api.scaleway.ai/v1" })
+    ]
+  },
+  {
+    id: "venice-ai",
+    label: "Venice AI",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "Private and uncensored AI via Venice.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "API key", { envVar: "VENICE_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { envVar: "VENICE_BASE_URL", defaultValue: "https://api.venice.ai/api/v1" })
+    ]
+  },
 ];
 
 export function getProviderPresets(): ProviderPreset[] {

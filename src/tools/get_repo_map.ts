@@ -371,28 +371,48 @@ async function analyzeFileWithAST(filePath: string, tsMorph: typeof import("ts-m
 
 // ─── Directory Scanner ──────────────────────────────────────────────────────
 
-async function scanDirectory(dir: string, baseDir: string, maxDepth: number, currentDepth: number, tsMorph: typeof import("ts-morph"), includeImports: boolean): Promise<FileMap[]> {
+async function scanDirectory(
+  dir: string,
+  baseDir: string,
+  maxDepth: number,
+  currentDepth: number,
+  tsMorph: typeof import("ts-morph"),
+  includeImports: boolean,
+  onProgress?: (message: string, percent: number) => void
+): Promise<FileMap[]> {
   if (currentDepth > maxDepth) return [];
-
-  let entries: Dirent[];
-  try {
-    entries = await readdir(dir, { withFileTypes: true }) as Dirent[];
-  } catch {
-    return [];
-  }
 
   const results: FileMap[] = [];
 
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
-      if (["node_modules", "dist", ".git", "__pycache__", ".next", "build", "out"].includes(entry.name)) continue;
-      results.push(...await scanDirectory(join(dir, entry.name), baseDir, maxDepth, currentDepth + 1, tsMorph, includeImports));
-    } else if (entry.isFile()) {
-      const ext = extname(entry.name);
-      if (![".ts", ".tsx", ".js", ".jsx"].includes(ext)) continue;
-      if (entry.name.endsWith(".d.ts") || entry.name.endsWith(".test.ts") || entry.name.endsWith(".spec.ts")) continue;
+  async function getFiles(d: string, depth: number): Promise<string[]> {
+    if (depth > maxDepth) return [];
+    try {
+      const entries = await readdir(d, { withFileTypes: true });
+      const paths: string[] = [];
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          if (["node_modules", "dist", ".git", "__pycache__", ".next", "build", "out"].includes(entry.name)) continue;
+          paths.push(...await getFiles(join(d, entry.name), depth + 1));
+        } else if (entry.isFile()) {
+          const ext = extname(entry.name);
+          if ([".ts", ".tsx", ".js", ".jsx"].includes(ext) && !entry.name.endsWith(".d.ts") && !entry.name.endsWith(".test.ts") && !entry.name.endsWith(".spec.ts")) {
+            paths.push(join(d, entry.name));
+          }
+        }
+      }
+      return paths;
+    } catch { return []; }
+  }
 
-      const filePath = join(dir, entry.name);
+  const allFiles = currentDepth === 0 ? await getFiles(dir, 0) : [];
+  
+  if (currentDepth === 0 && allFiles.length > 0) {
+    let processed = 0;
+    for (const filePath of allFiles) {
+      processed++;
+      const relPath = relative(baseDir, filePath).replace(/\\/g, "/");
+      onProgress?.(`Analyzing ${relPath}`, (processed / allFiles.length) * 100);
+      
       try {
         const fileMap = await analyzeFileWithAST(filePath, tsMorph);
         if (!includeImports) fileMap.imports = [];
@@ -404,6 +424,20 @@ async function scanDirectory(dir: string, baseDir: string, maxDepth: number, cur
         const symbols = regexScan(content);
         if (symbols.length > 0) {
           results.push({ path: filePath, symbols, imports: [], exports: symbols.map((s) => s.name) });
+        }
+      }
+    }
+  } else if (currentDepth > 0) {
+    // Original recursive logic for non-root calls (though we optimized to handle all in root)
+    const entries = await readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        if (["node_modules", "dist", ".git", "__pycache__", ".next", "build", "out"].includes(entry.name)) continue;
+        results.push(...await scanDirectory(join(dir, entry.name), baseDir, maxDepth, currentDepth + 1, tsMorph, includeImports, onProgress));
+      } else if (entry.isFile()) {
+        const ext = extname(entry.name);
+        if ([".ts", ".tsx", ".js", ".jsx"].includes(ext) && !entry.name.endsWith(".d.ts")) {
+          // fallback scan
         }
       }
     }
@@ -646,7 +680,7 @@ function formatFileMap(fileMap: FileMap, baseDir: string): string[] {
 
 // ─── Handler ────────────────────────────────────────────────────────────────
 
-export const get_repo_map_handler: ToolHandler = async (args) => {
+export const get_repo_map_handler: ToolHandler = async (args, context) => {
   const targetDir = (args.dir as string) || "src";
   const maxDepth = (args.maxDepth as number) ?? 5;
   const includeImports = (args.includeImports as boolean) ?? false;
@@ -674,7 +708,7 @@ export const get_repo_map_handler: ToolHandler = async (args) => {
 
   try {
     const needImports = includeImports || showDeps;
-    const fileMaps = await scanDirectory(absDir, absDir, maxDepth, 0, tsMorph, needImports);
+    const fileMaps = await scanDirectory(absDir, absDir, maxDepth, 0, tsMorph, needImports, context?.onProgress);
 
     if (fileMaps.length === 0) {
       return { content: `No exported structures found in ${targetDir}` };

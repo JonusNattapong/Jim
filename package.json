@@ -1,6 +1,6 @@
 {
   "name": "jim",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "description": "AI coding agent with 15 tools, multi-model support, hooks, sub-agents, and MCP integration",
   "type": "module",
   "bin": {
@@ -55,6 +55,7 @@
     "ink-text-input": "^6.0.0",
     "openai": "^4.85.0",
     "pino": "^10.3.1",
+    "playwright-core": "^1.58.2",
     "react": "^19.2.4",
     "terminal-image": "^4.2.0",
     "tiktoken": "^1.0.22",

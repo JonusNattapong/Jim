@@ -78,10 +78,12 @@ export const twitter_read_handler: ToolHandler = async (args) => {
     const cmd = parts[0];
     const baseArgs = parts.slice(1);
 
+    const abortSignal = (args as any).__abortSignal as AbortSignal | undefined;
+
     const { stdout } = await execFileAsync(
       cmd,
       [...baseArgs, "read", normalizedUrl],
-      { timeout: 30000, env: { ...process.env, FORCE_COLOR: "0" } }
+      { timeout: 30000, env: { ...process.env, FORCE_COLOR: "0" }, signal: abortSignal }
     );
 
     const output = stdout.trim();

@@ -2,14 +2,14 @@ import React from "react";
 import { Box, Text } from "ink";
 import { theme } from "../theme.js";
 import { MarkdownText } from "./MarkdownText.js";
-import { GradientText } from "./GradientText.js";
+import { TaskBoard, parseTaskBoard } from "./TaskBoard.js";
 
 interface MessageProps {
   role: "user" | "assistant" | "system";
   content: string;
 }
 
-export const Message: React.FC<MessageProps> = ({ role, content }) => {
+const MessageComponent: React.FC<MessageProps> = ({ role, content }) => {
   if (role === "user") {
     return (
       <Box marginTop={1} flexDirection="row">
@@ -20,21 +20,32 @@ export const Message: React.FC<MessageProps> = ({ role, content }) => {
   }
 
   if (role === "assistant") {
+    const taskBoardData = parseTaskBoard(content);
+
     return (
-      <Box marginTop={1} flexDirection="row">
-        <Box 
-          flexDirection="column" 
-          flexShrink={1} 
-          borderStyle="single" 
-          borderColor={theme.secondary} 
-          borderLeft={true} 
-          borderRight={false} 
-          borderTop={false} 
-          borderBottom={false} 
-          paddingLeft={1}
-        >
-          <MarkdownText>{content}</MarkdownText>
+      <Box marginTop={1} flexDirection="column">
+        <Box flexDirection="row">
+          <Box 
+            flexDirection="column" 
+            flexShrink={1} 
+            borderStyle="single" 
+            borderColor={theme.secondary} 
+            borderLeft={true} 
+            borderRight={false} 
+            borderTop={false} 
+            borderBottom={false} 
+            paddingLeft={1}
+          >
+            <MarkdownText>{content}</MarkdownText>
+          </Box>
         </Box>
+
+        {/* Surprise: Render a structured Task Board if found! */}
+        {taskBoardData && (
+          <Box marginTop={0} marginBottom={1}>
+            <TaskBoard board={taskBoardData} />
+          </Box>
+        )}
       </Box>
     );
   }
@@ -46,3 +57,5 @@ export const Message: React.FC<MessageProps> = ({ role, content }) => {
     </Box>
   );
 };
+
+export const Message = React.memo(MessageComponent);

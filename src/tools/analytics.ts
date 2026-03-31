@@ -28,8 +28,31 @@ export class ToolAnalytics {
   private stats = new Map<string, ToolStats>();
   private log = childLogger({ component: "analytics" });
 
-  /** Record a tool call result */
+  private queue: Array<{ toolName: string; success: boolean; durationMs: number; error?: string }> = [];
+  private processing = false;
+
+  /** Record a tool call result (queued background sink) */
   record(toolName: string, success: boolean, durationMs: number, error?: string): void {
+    this.queue.push({ toolName, success, durationMs, error });
+    if (!this.processing) {
+      this.processQueue().catch(err => this.log.error({ err }, "queue processing error"));
+    }
+  }
+
+  private async processQueue() {
+    this.processing = true;
+    while (this.queue.length > 0) {
+      const item = this.queue.shift();
+      if (item) {
+        this.internalRecord(item.toolName, item.success, item.durationMs, item.error);
+      }
+      // Yield back to event loop
+      await new Promise(r => setTimeout(r, 0));
+    }
+    this.processing = false;
+  }
+
+  private internalRecord(toolName: string, success: boolean, durationMs: number, error?: string): void {
     const existing = this.stats.get(toolName) ?? {
       calls: 0,
       successes: 0,

@@ -221,8 +221,8 @@ function parseBlocks(text: string): Block[] {
 
 // ─── Renderer ──────────────────────────────────────────
 
-export const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
-  const blocks = parseBlocks(children);
+export const MarkdownText: React.FC<MarkdownTextProps> = React.memo(({ children }) => {
+  const blocks = React.useMemo(() => parseBlocks(children), [children]);
   const maxWidth = Math.min(process.stdout.columns || 80, 80);
 
   return (
@@ -393,4 +393,4 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
       })}
     </Box>
   );
-};
+});

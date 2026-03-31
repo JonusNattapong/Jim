@@ -35,7 +35,7 @@ export const ExpandableBlock: React.FC<{ title: string; content: string }> = ({ 
       <Box flexDirection="row" justifyContent="space-between">
          <Text color={isFocused ? theme.warning : theme.primary} bold>{title}</Text>
          <Text color={isFocused ? theme.warning : theme.border}>
-           {expanded ? "[-] กด Enter เพื่อพับเก็บ" : `[+] ซ่อนอยู่ ${(lines.length - 10).toLocaleString()} บรรทัด (กด Enter เพื่อกาง)`}
+           {expanded ? "[-] Press Enter to collapse" : `[+] ${(lines.length - 10).toLocaleString()} lines hidden (Press Enter to expand)`}
          </Text>
       </Box>
       {expanded ? (

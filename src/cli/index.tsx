@@ -115,6 +115,14 @@ async function main(): Promise<void> {
     }
   }
 
+  if (!sessionIdToLoad) {
+    const recentSessions = await agent.listSessions(config.projectRoot);
+    const recentSameProject = recentSessions.find((session) => session.sameProject);
+    if (recentSameProject) {
+      console.log(`  Hint: resume latest ${config.projectRoot.split(/[\\\\/]/).pop() || "project"} session with jim -s ${recentSameProject.id}`);
+    }
+  }
+
   if (sessionIdToLoad) {
     const loaded = await agent.loadSession(sessionIdToLoad);
     if (loaded) {

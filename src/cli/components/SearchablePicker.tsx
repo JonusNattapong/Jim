@@ -8,6 +8,8 @@ export interface SearchablePickerItem {
   value: string;
   description?: string;
   keywords?: string[];
+  preview?: string;
+  previewLines?: number;
 }
 
 type PickerEntry =
@@ -93,6 +95,8 @@ export const SearchablePicker: React.FC<SearchablePickerProps> = ({
     () => visibleEntries.filter((entry): entry is Extract<PickerEntry, { type: "item" }> => entry.type === "item"),
     [visibleEntries],
   );
+
+  const activeItem = visibleItems[index]?.item;
 
   useEffect(() => {
     if (index >= visibleItems.length) setIndex(Math.max(0, visibleItems.length - 1));
@@ -203,6 +207,25 @@ export const SearchablePicker: React.FC<SearchablePickerProps> = ({
           </Box>
         );
       })()}
+      {activeItem?.preview && (
+        <Box
+          marginTop={1}
+          flexDirection="column"
+          borderStyle="round"
+          borderColor={theme.border}
+          paddingX={1}
+        >
+          <Text color={theme.primary} bold>Preview</Text>
+          <Text dimColor>
+            {(() => {
+              const lines = activeItem.preview!.split("\n");
+              const maxLines = activeItem.previewLines ?? 4;
+              const shown = lines.slice(0, maxLines).join("\n");
+              return lines.length > maxLines ? `${shown}\n...` : shown;
+            })()}
+          </Text>
+        </Box>
+      )}
     </Box>
   );
 };

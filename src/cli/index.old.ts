@@ -263,7 +263,17 @@ async function main(): Promise<void> {
 
       console.log(`${c.dim}\n── Turn ${agent.getTurnCount() + 1} ──${c.reset}\n`);
       if (streamingEnabled) process.stdout.write(`${c.green}${c.bold}Agent:${c.reset} `);
-      const response = await agent.run(input, callbacks);
+      
+      let response = "";
+      const generator = agent.run(input, callbacks);
+      for await (const event of generator) {
+        if (event.type === "done") {
+          response = event.content;
+        } else if (event.type === "error") {
+          console.error(`\n${c.red}Error: ${event.message}${c.reset}`);
+        }
+      }
+
       if (!streamingEnabled && response && !response.startsWith("Error:")) {
         console.log(`\n${c.green}${c.bold}Agent:${c.reset} ${response}\n`);
       } else if (streamingEnabled) {

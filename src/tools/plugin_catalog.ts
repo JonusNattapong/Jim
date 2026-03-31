@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolHandler } from "./types.js";
+import type { ToolDefinition, ToolHandler, ToolResult } from "./types.js";
 
 export const list_plugins_definition: ToolDefinition = {
   type: "function",
@@ -15,31 +15,34 @@ export const list_plugins_definition: ToolDefinition = {
   },
 };
 
-export const list_plugins_handler: ToolHandler = async () => ({
-  content:
-    "Built-in tools:\n" +
-    "- file ops: read_file, edit_file, write_file, list_files\n" +
-    "- search: grep\n" +
-    "- execution: run_command, git_command\n" +
-    "- project: get_project_info, get_repo_map\n" +
-    "- tasks: todo_write, ask_user_choice\n" +
-    "- web: web_fetch, web_search\n" +
-    "- reasoning: reflect\n" +
-    "- code intelligence: graph_query (build/query/trace/impact/deps/cycles)\n" +
-    "- agents: spawn_agent (roles: explore, general, planner, executor, reviewer, web_surfer)\n" +
-    "- browser: browser_action (auto-loads Puppeteer MCP for navigate, click, type, screenshot, etc.)\n" +
-    "- mcp: mcp_manager (dynamically load/unload MCP servers on-the-fly)\n" +
-    "- memory: memory_archive, memory_recall, memory_list, memory_forget\n\n" +
-    "MCP presets: postgres, sqlite, filesystem, fetch, memory, git, sequentialthinking, time,\n" +
-    "  redis, puppeteer, brave_search, github, slack, google_drive, google_maps, sentry\n\n" +
-    "Custom MCP servers can also be loaded via mcp_manager with command/args.\n\n" +
-    "GraphRAG features:\n" +
-    "- graph_query build: Index codebase into knowledge graph (AST-based)\n" +
-    "- graph_query query: Search entities by name/type\n" +
-    "- graph_query trace: Find relationship path between two entities\n" +
-    "- graph_query impact: Blast radius analysis (what breaks if X changes)\n" +
-    "- graph_query deps: Show dependencies of a file or entity\n" +
-    "- graph_query cycles: Find circular dependencies\n" +
-    "- graph_query related: Find all connected entities\n" +
-    "- graph_query bughunt: Surface hotspots, risky cycles, and likely bug zones",
-});
+export const list_plugins_handler: ToolHandler = async (args, context) => {
+  if (!context?.registry) {
+    return { content: "Internal error: registry not found in context.", isError: true };
+  }
+
+  const registry = context.registry;
+  const pm = registry.getPluginManager();
+  const plugins = pm.getAllPlugins();
+  
+  let content = "Installed Plugins & Capabilities:\n\n";
+
+  for (const metadata of plugins) {
+    const plugin = pm.getPlugin(metadata.name);
+    const status = plugin?.enabled ? "[ENABLED]" : "[DISABLED]";
+    content += `${status} ${metadata.name} v${metadata.version} by ${metadata.author ?? "Jim"}\n`;
+    content += `Description: ${metadata.description}\n`;
+    
+    if (plugin && plugin.tools.length > 0) {
+      const toolNames = plugin.tools.map((t: { definition: ToolDefinition }) => t.definition.function.name).join(", ");
+      content += `Tools: ${toolNames}\n`;
+    }
+    content += "\n";
+  }
+
+  content += "GraphRAG & Advanced Features:\n";
+  content += "- Graph indexing, relationship tracing, and impact analysis via 'graph_query'\n";
+  content += "- Autonomous sub-agents via 'spawn_agent'\n";
+  content += "- Dynamic MCP server management via 'mcp' tools\n";
+
+  return { content };
+};

@@ -27,8 +27,8 @@ export const spawn_agent_definition: ToolDefinition = {
       properties: {
         type: {
           type: "string",
-          enum: ["explore", "general", "planner", "executor", "reviewer", "web_surfer", "team-dev", "team-research", "parallel"],
-          description: "Agent type or team mode",
+          enum: ["explore", "general", "planner", "executor", "reviewer", "web_surfer", "browser_agent", "team-dev", "team-research", "parallel"],
+          description: "Agent type or team mode. 'browser_agent' is for automated web interaction tasks.",
         },
         prompt: {
           type: "string",

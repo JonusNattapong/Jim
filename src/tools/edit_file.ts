@@ -2,6 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve, relative } from "node:path";
 import type { ToolDefinition, ToolHandler } from "./types.js";
 import { createDiff } from "../utils/diff.js";
+import { HistoryManager } from "../services/history-manager.js";
 
 export const edit_file_definition: ToolDefinition = {
   type: "function",
@@ -29,6 +30,10 @@ export const edit_file_definition: ToolDefinition = {
         new_text: {
           type: "string",
           description: "New content to replace the specified block. Provide multiple lines if needed.",
+        },
+        dry_run: {
+          type: "boolean",
+          description: "If true, return the diff without applying changes to the file. Use for previews or approval steps.",
         },
       },
       required: ["path", "start_line", "end_line", "new_text"],
@@ -60,15 +65,25 @@ export const edit_file_handler: ToolHandler = async (args) => {
     const after = lines.slice(endLine);
     const newLines = newText.split(/\r?\n/);
 
+    const dryRun = args.dry_run as boolean | undefined;
     const updated = [...before, ...newLines, ...after].join(isWindows ? "\r\n" : "\n");
-    await writeFile(absPath, updated, "utf-8");
+    let snapshotId: string | null = null;
+    if (!dryRun) {
+      // Take snapshot before modification (Pillar 20)
+      const history = new HistoryManager(process.cwd());
+      await history.init();
+      snapshotId = await history.takeSnapshot(absPath);
+      
+      await writeFile(absPath, updated, "utf-8");
+    }
 
     const oldTextStr = lines.slice(startLine - 1, endLine).join(isWindows ? "\r\n" : "\n");
     const newTextStr = newLines.join(isWindows ? "\r\n" : "\n");
 
     return {
-      content: `Successfully replaced lines ${startLine}-${endLine} in ${relative(process.cwd(), absPath)}`,
+      content: `Successfully replaced lines ${startLine}-${endLine} in ${relative(process.cwd(), absPath)}${snapshotId ? ` (Snapshot: ${snapshotId})` : ""}`,
       diff: createDiff(oldTextStr, newTextStr),
+      metadata: { snapshotId }
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

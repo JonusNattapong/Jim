@@ -1,5 +1,6 @@
 {
   "recentModels": [
+    "arcee-ai/trinity-large-preview:free",
     "minimax/minimax-m2.5:free"
   ],
   "favoriteModels": [],
@@ -13,5 +14,21 @@
     "kilocode"
   ],
   "favoriteConnections": [],
-  "themeId": "sunset"
+  "promptHistory": [
+    "เปิดเว็บดูเองเลย",
+    "3 ข่าวเด่นที่น่าสนใจมาให้ดูหน่อย\"",
+    "/models",
+    "/",
+    "/h",
+    "ดีคับบ",
+    "เคยเล่นไหม",
+    "ช่วยค้นหาข้อมูลเกม วอคราม",
+    "hi",
+    "/providers",
+    "ดีจ้ะะ",
+    "ลองเรียก subagent เพื่ออ่าน README",
+    "มีนะ"
+  ],
+  "themeId": "sunset",
+  "showHeader": true
 }

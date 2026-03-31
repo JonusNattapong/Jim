@@ -11,13 +11,33 @@ interface ConfigItem {
   description?: string;
 }
 
+interface StatusInfo {
+  nodeVersion: string;
+  platform: string;
+  uptime: string;
+  memoryMb: number;
+  projectRoot: string;
+  provider: string;
+  adapter: string;
+}
+
+interface UsageInfo {
+  tokens: number;
+  messages: number;
+  turns: number;
+  sessionDuration: string;
+  model: string;
+}
+
 interface ConfigViewProps {
   config: ConfigItem[];
   onClose: () => void;
   onUpdate: (key: string, value: any) => void;
+  status?: StatusInfo;
+  usage?: UsageInfo;
 }
 
-export const ConfigView: React.FC<ConfigViewProps> = ({ config, onClose, onUpdate }) => {
+export const ConfigView: React.FC<ConfigViewProps> = ({ config, onClose, onUpdate, status, usage }) => {
   const [tab, setTab] = useState<"Settings" | "Status" | "Usage">("Settings");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [search, setSearch] = useState("");
@@ -110,9 +130,77 @@ export const ConfigView: React.FC<ConfigViewProps> = ({ config, onClose, onUpdat
             );
           })}
         </Box>
+      ) : tab === "Status" ? (
+        <Box flexDirection="column">
+          {status ? (
+            <>
+              <Box>
+                <Box width={20}><Text dimColor>Node.js</Text></Box>
+                <Text color={theme.text}>{status.nodeVersion}</Text>
+              </Box>
+              <Box>
+                <Box width={20}><Text dimColor>Platform</Text></Box>
+                <Text color={theme.text}>{status.platform}</Text>
+              </Box>
+              <Box>
+                <Box width={20}><Text dimColor>Uptime</Text></Box>
+                <Text color={theme.text}>{status.uptime}</Text>
+              </Box>
+              <Box>
+                <Box width={20}><Text dimColor>Memory</Text></Box>
+                <Text color={theme.text}>{status.memoryMb} MB</Text>
+              </Box>
+              <Box>
+                <Box width={20}><Text dimColor>Provider</Text></Box>
+                <Text color={theme.primary}>{status.provider}</Text>
+              </Box>
+              <Box>
+                <Box width={20}><Text dimColor>Adapter</Text></Box>
+                <Text color={theme.primary}>{status.adapter}</Text>
+              </Box>
+              <Box marginTop={1}>
+                <Box width={20}><Text dimColor>Project</Text></Box>
+                <Text color={theme.secondary}>{status.projectRoot}</Text>
+              </Box>
+            </>
+          ) : (
+            <Text dimColor>No status data available</Text>
+          )}
+        </Box>
       ) : (
         <Box flexDirection="column">
-            <Text>System {tab} information will go here...</Text>
+          {usage ? (
+            <>
+              <Box>
+                <Box width={20}><Text dimColor>Model</Text></Box>
+                <Text color={theme.primary}>{usage.model}</Text>
+              </Box>
+              <Box>
+                <Box width={20}><Text dimColor>Tokens used</Text></Box>
+                <Text color={usage.tokens > 100000 ? theme.warning : theme.text}>
+                  {usage.tokens.toLocaleString()}
+                </Text>
+              </Box>
+              <Box>
+                <Box width={20}><Text dimColor>Messages</Text></Box>
+                <Text color={theme.text}>{usage.messages}</Text>
+              </Box>
+              <Box>
+                <Box width={20}><Text dimColor>Turns</Text></Box>
+                <Text color={theme.text}>{usage.turns}</Text>
+              </Box>
+              <Box>
+                <Box width={20}><Text dimColor>Session time</Text></Box>
+                <Text color={theme.text}>{usage.sessionDuration}</Text>
+              </Box>
+              <Box marginTop={1}>
+                <Box width={20}><Text dimColor>Est. cost</Text></Box>
+                <Text color={theme.secondary}>~${((usage.tokens / 1_000_000) * 3.00).toFixed(4)}</Text>
+              </Box>
+            </>
+          ) : (
+            <Text dimColor>No usage data available</Text>
+          )}
         </Box>
       )}
 

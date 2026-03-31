@@ -174,65 +174,77 @@ export class PermissionManager {
     reason?: string;
     needsApproval: boolean;
   }> {
-    // Plan Approval Guardrail
-    const mutationTools = ["edit_file", "write_file", "run_command", "delete_file", "apply_diff"];
-    if (mutationTools.includes(toolName) && !this.planApproved) {
+    try {
+      // Plan Approval Guardrail - Never skip this
+      const mutationTools = ["edit_file", "write_file", "run_command", "delete_file", "apply_diff"];
+      if (mutationTools.includes(toolName) && !this.planApproved) {
+        return { 
+          allowed: false, 
+          reason: "Plan not approved. You must use todo_write to propose a plan and ask the user for approval before using mutation tools.", 
+          needsApproval: false 
+        };
+      }
+
+      const toolSignature = `${toolName}(${JSON.stringify(args)})`;
+
+      // Check deny patterns (High priority)
+      for (const pattern of this.denyPatterns) {
+        if (pattern.test(toolSignature)) {
+          return { allowed: false, reason: `Blocked by deny rule: ${pattern}`, needsApproval: false };
+        }
+      }
+
+      // Check allow patterns
+      for (const pattern of this.allowPatterns) {
+        if (pattern.test(toolSignature)) {
+          return { allowed: true, needsApproval: false };
+        }
+      }
+
+      // Check persisted decisions (wildcard matching)
+      const signature = toSignature(toolName, args);
+      for (const [pattern, approved] of this.persistedDecisions) {
+        if (wildcardMatch(pattern, signature)) {
+          if (!approved) {
+            return { allowed: false, reason: "Previously denied by user", needsApproval: false };
+          }
+          return { allowed: true, needsApproval: false };
+        }
+      }
+
+      // Plan mode - Read only strictly
+      if (this.mode === "plan") {
+        const readOnlyTools = ["read_file", "list_files", "grep", "get_project_info", "git_command"];
+        if (readOnlyTools.includes(toolName)) return { allowed: true, needsApproval: false };
+        return { allowed: false, reason: "Plan mode: read-only tools only", needsApproval: false };
+      }
+
+      // edit mode - Auto allow safe edits, ask for commands
+      if (this.mode === "edit") {
+        const editTools = ["read_file", "list_files", "grep", "edit_file", "write_file", "get_project_info", "git_command"];
+        if (editTools.includes(toolName)) return { allowed: true, needsApproval: false };
+        if (toolName === "run_command") return { allowed: true, needsApproval: true };
+        // If not recognized in edit mode, default to ask
+      }
+
+      // ask mode / Default - Safe tools are allowed, others need approval
+      const safeTools = [
+        "read_file", "list_files", "grep", "get_project_info", "git_command",
+        "web_fetch", "web_search", "todo_write", "ask_user_choice", "list_plugins",
+      ];
+      if (safeTools.includes(toolName)) return { allowed: true, needsApproval: false };
+
+      // Everything else: requires user approval (Fail-closed: if we reached here, it's not explicitly allowed)
+      return { allowed: true, needsApproval: true };
+    } catch (err: unknown) {
+      // Fail-closed: Any internal error results in DENY for safety
+      const msg = err instanceof Error ? err.message : String(err);
       return { 
         allowed: false, 
-        reason: "Plan not approved. You must use todo_write to propose a plan and ask the user for approval before using mutation tools.", 
+        reason: `Internal permission engine error: ${msg}. Safe default is to deny.`, 
         needsApproval: false 
       };
     }
-
-    const toolSignature = `${toolName}(${JSON.stringify(args)})`;
-
-    // Check deny patterns
-    for (const pattern of this.denyPatterns) {
-      if (pattern.test(toolSignature)) {
-        return { allowed: false, reason: `Blocked by deny rule: ${pattern}`, needsApproval: false };
-      }
-    }
-
-    // Check allow patterns
-    for (const pattern of this.allowPatterns) {
-      if (pattern.test(toolSignature)) {
-        return { allowed: true, needsApproval: false };
-      }
-    }
-
-    // Check persisted decisions (wildcard matching)
-    const signature = toSignature(toolName, args);
-    for (const [pattern, approved] of this.persistedDecisions) {
-      if (wildcardMatch(pattern, signature)) {
-        if (!approved) {
-          return { allowed: false, reason: "Previously denied by user", needsApproval: false };
-        }
-        return { allowed: true, needsApproval: false };
-      }
-    }
-
-    // Plan mode
-    if (this.mode === "plan") {
-      const readOnlyTools = ["read_file", "list_files", "grep", "get_project_info", "git_command"];
-      if (readOnlyTools.includes(toolName)) return { allowed: true, needsApproval: false };
-      return { allowed: false, reason: "Plan mode: read-only", needsApproval: false };
-    }
-
-    // edit mode
-    if (this.mode === "edit") {
-      const editTools = ["read_file", "list_files", "grep", "edit_file", "write_file", "get_project_info", "git_command"];
-      if (editTools.includes(toolName)) return { allowed: true, needsApproval: false };
-      if (toolName === "run_command") return { allowed: true, needsApproval: true };
-    }
-
-    // ask mode
-    const safeTools = [
-      "read_file", "list_files", "grep", "get_project_info", "git_command",
-      "web_fetch", "web_search", "todo_write", "ask_user_choice", "list_plugins",
-    ];
-    if (safeTools.includes(toolName)) return { allowed: true, needsApproval: false };
-
-    return { allowed: true, needsApproval: true };
   }
 
   async approve(prompt: string): Promise<boolean> {

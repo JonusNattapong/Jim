@@ -29,6 +29,47 @@ export interface CheckpointData {
   messageCount: number;
 }
 
+export interface SessionSummary {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  turnCount: number;
+  projectRoot: string;
+  sameProject?: boolean;
+  lastMessage?: string;
+  lastMessageRole?: "user" | "assistant" | "system";
+  lastMessageSnippet?: string;
+}
+
+function summarizeSnippet(content: string, max = 160): string {
+  const compact = content.replace(/\s+/g, " ").trim();
+  if (compact.length <= max) {
+    return compact;
+  }
+  return `${compact.slice(0, max - 3)}...`;
+}
+
+function extractLastMessageMetadata(messages: ChatCompletionMessageParam[]): Pick<SessionSummary, "lastMessage" | "lastMessageRole" | "lastMessageSnippet"> {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (!message || typeof message !== "object" || !("content" in message)) {
+      continue;
+    }
+
+    const content = message.content;
+    if (typeof content === "string" && content.trim()) {
+      const normalized = content.trim();
+      return {
+        lastMessage: normalized,
+        lastMessageRole: message.role === "assistant" || message.role === "system" ? message.role : "user",
+        lastMessageSnippet: summarizeSnippet(normalized),
+      };
+    }
+  }
+
+  return {};
+}
+
 /**
  * Persists conversation sessions to disk with checkpoint support.
  * Sessions are saved in ~/.jim/sessions/ directory.
@@ -66,29 +107,44 @@ export class SessionManager {
     }
   }
 
-  async list(): Promise<Array<{ id: string; createdAt: string; updatedAt: string; turnCount: number }>> {
+  async list(projectRoot?: string): Promise<SessionSummary[]> {
     try {
       await this.ensureDir();
       const files = await readdir(this.sessionsDir);
-      const sessions: Array<{ id: string; createdAt: string; updatedAt: string; turnCount: number }> = [];
+      const sessions: SessionSummary[] = [];
 
       for (const file of files.sort().reverse()) {
         if (file.endsWith(".json")) {
           try {
             const data = await this.load(file.replace(".json", ""));
             if (data) {
+              const lastMessage = extractLastMessageMetadata(data.messages);
               sessions.push({
                 id: data.id,
                 createdAt: data.createdAt,
                 updatedAt: data.updatedAt,
                 turnCount: data.turnCount,
+                projectRoot: data.projectRoot,
+                sameProject: projectRoot ? data.projectRoot === projectRoot : undefined,
+                ...lastMessage,
               });
             }
           } catch { /* skip corrupt files */ }
         }
       }
 
-      return sessions;
+      if (!projectRoot) {
+        return sessions.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      }
+
+      return sessions.sort((a, b) => {
+        const aSame = a.sameProject ? 1 : 0;
+        const bSame = b.sameProject ? 1 : 0;
+        if (aSame !== bSame) {
+          return bSame - aSame;
+        }
+        return b.updatedAt.localeCompare(a.updatedAt);
+      });
     } catch {
       return [];
     }

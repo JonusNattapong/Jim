@@ -27,7 +27,8 @@
     "Entry point is src/cli/index.tsx not src/index.ts",
     "Mathematical formulas in code (e.g., sphere volume V = (4/3) × π × r³)",
     "JSDoc documentation standards",
-    "Todo/plan approval workflow before mutations"
+    "Todo/plan approval workflow before mutations",
+    "Project 'jim' is an AI coding agent"
   ],
-  "lastUpdated": "2026-03-31T02:05:59.920Z"
+  "lastUpdated": "2026-03-31T20:46:24.679Z"
 }

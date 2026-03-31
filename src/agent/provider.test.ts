@@ -48,22 +48,32 @@ describe("createProvider", () => {
     expect(provider.name).toBe("openai-compatible");
   });
 
-  it("returns ResponsesProvider when provider is openai", () => {
+  it("returns ResponsesProvider when provider is responses", () => {
+    const mock = createMockClient();
+    const provider = createProvider(mock, { provider: "responses" });
+    expect(provider).toBeInstanceOf(ResponsesProvider);
+    // ResponsesProvider.name is "openai" (it's an OpenAI Responses API adapter)
+    expect(provider.name).toBe("openai");
+  });
+
+  it("returns ChatCompletionsProvider when provider is openai", () => {
     const mock = createMockClient();
     const provider = createProvider(mock, { provider: "openai" });
-    expect(provider.name).toBe("openai");
-    expect(provider).toBeInstanceOf(ResponsesProvider);
+    expect(provider.name).toBe("openai-compatible");
+    expect(provider).toBeInstanceOf(ChatCompletionsProvider);
   });
 
   it("normalizes legacy aliases", () => {
-    expect(normalizeProviderMode("responses")).toBe("openai");
+    expect(normalizeProviderMode("responses")).toBe("responses");
     expect(normalizeProviderMode("chat-completions")).toBe("openai-compatible");
+    expect(normalizeProviderMode("auto")).toBeUndefined();
   });
 
   it("exposes provider metadata registry", () => {
     const registry = getProviderRegistry();
     expect(registry.length).toBeGreaterThanOrEqual(6);
-    expect(getProviderMetadata("openai").transport).toBe("responses");
+    expect(getProviderMetadata("openai").transport).toBe("chat-completions");
+    expect(getProviderMetadata("responses").transport).toBe("responses");
     expect(getProviderMetadata("openai-compatible").transport).toBe("chat-completions");
     expect(getProviderMetadata("anthropic").endpoint).toBe("/v1/messages");
     expect(getProviderMetadata("azure-openai").name).toBe("azure-openai");
@@ -72,11 +82,12 @@ describe("createProvider", () => {
   });
 
   it("recommends providers from model patterns", () => {
-    expect(inferProviderFromModel("openai/gpt-5.2")).toBe("openai");
-    expect(inferProviderFromModel("anthropic/claude-sonnet-4.6")).toBe("anthropic");
-    expect(inferProviderFromModel("google/gemini-3-pro-preview")).toBe("vertex-ai");
+    expect(inferProviderFromModel("openai/gpt-4o")).toBe("openai");
+    expect(inferProviderFromModel("anthropic/claude-3-5-sonnet")).toBe("anthropic");
+    expect(inferProviderFromModel("google/gemini-1.5-pro")).toBe("vertex-ai");
     expect(inferProviderFromModel("mistral/codestral-latest")).toBe("openai-compatible");
-    expect(inferProviderFromModel("meta/llama-3-70b")).toBe("bedrock");
+    expect(inferProviderFromModel("bedrock/llama3")).toBe("bedrock");
+    expect(inferProviderFromModel("some-unknown-model")).toBe("openai-compatible");
   });
 
   it("normalizes new provider modes", () => {

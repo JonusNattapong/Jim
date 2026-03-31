@@ -5,13 +5,21 @@ import type { ToolDefinition, ToolHandler } from "./types.js";
  * Uses FIRECRAWL_API_KEY env var.
  * Falls back to simple fetch if no key or error.
  */
-async function fetchWithFirecrawl(url: string, maxChars: number): Promise<{ content: string; source: string } | null> {
+async function fetchWithFirecrawl(url: string, maxChars: number, userSignal?: AbortSignal): Promise<{ content: string; source: string } | null> {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) return null;
 
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 60000);
+    if (userSignal) {
+      if (userSignal.aborted) {
+        clearTimeout(timeout);
+        controller.abort();
+      } else {
+        userSignal.addEventListener("abort", () => controller.abort(), { once: true });
+      }
+    }
 
     const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
       method: "POST",
@@ -63,10 +71,18 @@ async function fetchWithFirecrawl(url: string, maxChars: number): Promise<{ cont
  * Jina AI Reader - completely free, no API key needed.
  * Converts any URL to clean Markdown.
  */
-async function fetchWithJina(url: string, maxChars: number): Promise<{ content: string; source: string } | null> {
+async function fetchWithJina(url: string, maxChars: number, userSignal?: AbortSignal): Promise<{ content: string; source: string } | null> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
+    if (userSignal) {
+      if (userSignal.aborted) {
+        clearTimeout(timeout);
+        controller.abort();
+      } else {
+        userSignal.addEventListener("abort", () => controller.abort(), { once: true });
+      }
+    }
 
     const res = await fetch(`https://r.jina.ai/${url}`, {
       signal: controller.signal,
@@ -129,19 +145,21 @@ export const web_fetch_handler: ToolHandler = async (args) => {
   const url = args.url as string;
   const maxChars = (args.max_chars as number) ?? 15000;
 
+  const userSignal = (args as any).__abortSignal as AbortSignal | undefined;
+
   // Safety: only allow http/https
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     return { content: "Error: Only http:// and https:// URLs are allowed", isError: true };
   }
 
   // Try Firecrawl first (premium AI scraping to clean Markdown)
-  const firecrawlResult = await fetchWithFirecrawl(url, maxChars);
+  const firecrawlResult = await fetchWithFirecrawl(url, maxChars, userSignal);
   if (firecrawlResult) {
     return { content: `URL: ${url}\nSource: Firecrawl (AI-powered)\n\n${firecrawlResult.content}` };
   }
 
   // Try Jina AI (free, no API key needed)
-  const jinaResult = await fetchWithJina(url, maxChars);
+  const jinaResult = await fetchWithJina(url, maxChars, userSignal);
   if (jinaResult) {
     return { content: `URL: ${url}\nSource: Jina AI Reader (free)\n\n${jinaResult.content}` };
   }
@@ -150,6 +168,14 @@ export const web_fetch_handler: ToolHandler = async (args) => {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
+    if (userSignal) {
+      if (userSignal.aborted) {
+        clearTimeout(timeout);
+        controller.abort();
+      } else {
+        userSignal.addEventListener("abort", () => controller.abort(), { once: true });
+      }
+    }
 
     const res = await fetch(url, {
       signal: controller.signal,

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
 import { theme } from "../theme.js";
-import { RetroShader } from "./RetroShader.js";
 import { getRandomTip } from "../tips.js";
 import { GradientText } from "./GradientText.js";
 
@@ -16,13 +15,14 @@ interface HeaderProps {
   yolo?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming, tokens, projectRoot, username, yolo }) => {
+const HeaderComponent: React.FC<HeaderProps & { columns?: number }> = ({ model, mode, workMode, streaming, tokens, projectRoot, username, yolo, columns = 100 }) => {
   const shortModel = model.includes("/") ? model.split("/").pop()! : model;
   const user = username || "Engineer";
   const [tip] = useState(getRandomTip());
 
-  // Logo gradient colors
-  const logoColors = [theme.primary, theme.primaryBright, theme.textBright];
+  const showAscii = columns >= 90;
+  const maxPathLen = Math.floor(columns * 0.4);
+  const displayPath = projectRoot.length > maxPathLen ? "..." + projectRoot.slice(-maxPathLen) : projectRoot;
 
   // Rough blended average cost estimation: $3 per 1M tokens
   const estCost = ((tokens / 1_000_000) * 3.00).toFixed(4);
@@ -35,16 +35,17 @@ export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming
         <Box>
           <Text color={theme.primary} bold>JIMCODE </Text>
         </Box>
-        <Text color={theme.textMuted} dimColor>{process.env.JIM_VERSION || "v0.4.0"}</Text>
+        <Text color={theme.textMuted} dimColor>{process.env.JIM_VERSION || "v1.0.0"}</Text>
       </Box>
 
       {/* Main Dashboard Box */}
       <Box borderStyle="single" borderColor={theme.primary} flexDirection="row" paddingX={2} paddingY={0}>
         {/* Left Section: Branding & ASCII */}
-        <Box flexDirection="column" width="35%" paddingY={1} alignItems="center">
-          <Box marginY={1}>
-            <Text color={theme.primary} bold>
-              {`
+        {showAscii && (
+          <Box flexDirection="column" width="35%" paddingY={1} alignItems="center">
+            <Box marginY={1}>
+              <Text color={theme.primary} bold>
+                {`
      .::                
      .:: .:             
      .::   .::: .:: .:: 
@@ -53,25 +54,26 @@ export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming
 .:   .::.:: .::  .:  .::
  .::::  .::.:::  .:  .::
                         
-      `}
-            </Text>
+       `}
+              </Text>
+            </Box>
+            <Box flexDirection="column" alignItems="center">
+              <Text color={theme.primary} bold>{shortModel}</Text>
+              <Text color={theme.secondary} dimColor>{displayPath.slice(0, 30)}</Text>
+            </Box>
           </Box>
-          <Box flexDirection="column" alignItems="center">
-            <Text color={theme.primary} bold>{shortModel}</Text>
-            <Text color={theme.secondary} dimColor>{projectRoot}</Text>
-          </Box>
-        </Box>
+        )}
 
         {/* Right Section: System Metadata */}
         <Box
           flexDirection="column"
-          width="65%"
+          width={showAscii ? "65%" : "100%"}
           paddingY={1}
-          paddingLeft={3}
-          marginLeft={1}
+          paddingLeft={showAscii ? 3 : 0}
+          marginLeft={showAscii ? 1 : 0}
           borderStyle="single"
           borderColor={theme.primary}
-          borderLeft={true}
+          borderLeft={showAscii}
           borderRight={false}
           borderTop={false}
           borderBottom={false}
@@ -79,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming
           <Box justifyContent="space-between" marginBottom={1}>
             <Text color={theme.primary} bold>Welcome {user}</Text>
             <Box>
-              <Text color={theme.secondary} bold>[{projectRoot.split(/[\\\/]/).pop()}]</Text>
+              <Text color={theme.secondary} bold>[{displayPath.split(/[\\\/]/).pop()}]</Text>
             </Box>
           </Box>
 
@@ -107,6 +109,11 @@ export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming
                 <Text color={theme.textMuted} dimColor>● ENVIRONMENT: </Text>
                 <Text color={theme.primary} bold>{workMode.toUpperCase()}</Text>
               </Box>
+              {!showAscii && (
+                <Box>
+                   <Text color={theme.secondary} bold>{shortModel}</Text>
+                </Box>
+              )}
             </Box>
 
             {/* Tip Box */}
@@ -138,4 +145,6 @@ export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming
     </Box>
   );
 };
+
+export const Header = React.memo(HeaderComponent);
 

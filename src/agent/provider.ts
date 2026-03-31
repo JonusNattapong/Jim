@@ -28,10 +28,17 @@ export interface ProviderChunk {
   finishReason?: string;
 }
 
+export interface ProviderUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
 export interface ProviderResponse {
   content: string;
   toolCalls: ProviderToolCall[];
   finishReason: string | null;
+  usage?: ProviderUsage;
 }
 
 export interface ProviderOptions {
@@ -388,10 +395,19 @@ export class ChatCompletionsProvider implements LLMProvider {
       temperature: request.temperature ?? 0,
       max_tokens: request.maxTokens ?? 4096,
     });
-
+    
     const choice = response.choices[0];
     if (!choice) return { content: "", toolCalls: [], finishReason: null };
-    return finalizeChatResponse(choice);
+    
+    const finalized = finalizeChatResponse(choice);
+    if (response.usage) {
+      finalized.usage = {
+        promptTokens: response.usage.prompt_tokens,
+        completionTokens: response.usage.completion_tokens,
+        totalTokens: response.usage.total_tokens,
+      };
+    }
+    return finalized;
   }
 
   async stream(
@@ -450,7 +466,16 @@ export class ChatCompletionsProvider implements LLMProvider {
     let finishReason: string | null = null;
     const toolCalls = new Map<number, ProviderToolCall>();
 
+    let usage: ProviderUsage | undefined;
+
     for await (const chunk of stream) {
+      if (chunk.usage) {
+        usage = {
+          promptTokens: chunk.usage.prompt_tokens,
+          completionTokens: chunk.usage.completion_tokens,
+          totalTokens: chunk.usage.total_tokens,
+        };
+      }
       const choice = chunk.choices[0];
       if (!choice) continue;
 

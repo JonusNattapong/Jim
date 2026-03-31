@@ -26,11 +26,15 @@ export const StatsView: React.FC<StatsViewProps> = ({ projectRoot, onClose }) =>
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<StatsData | null>(null);
   const [tab, setTab] = useState<"Overview" | "Models">("Overview");
+  const [dateFilter, setDateFilter] = useState<"all" | "7d" | "30d">("all");
 
   useInput((input, key) => {
     if (key.escape || input === "q") onClose();
     if (key.tab || key.rightArrow || key.leftArrow) {
       setTab(prev => prev === "Overview" ? "Models" : "Overview");
+    }
+    if (input === "r") {
+      setDateFilter(prev => prev === "all" ? "7d" : prev === "7d" ? "30d" : "all");
     }
   });
 
@@ -144,11 +148,15 @@ export const StatsView: React.FC<StatsViewProps> = ({ projectRoot, onClose }) =>
 
   const renderHeatmap = () => {
     const today = new Date();
+    const days = dateFilter === "7d" ? 7 : dateFilter === "30d" ? 30 : 140;
+    const cols = Math.ceil(days / 7);
     const dots = [];
-    // Show last 20 weeks
+    const monthLabels: string[] = [];
+    let lastMonth = -1;
+
     for (let i = 0; i < 7; i++) {
         const row = [];
-        for (let j = 140; j >= 0; j -= 7) {
+        for (let j = days; j >= 0; j -= 7) {
             const d = new Date(today);
             d.setDate(today.getDate() - (j + i));
             const key = d.toISOString().split("T")[0];
@@ -159,7 +167,26 @@ export const StatsView: React.FC<StatsViewProps> = ({ projectRoot, onClose }) =>
         }
         dots.push(<Box key={i}>{row}</Box>);
     }
-    return <Box flexDirection="column" marginTop={1}>{dots}</Box>;
+
+    // Build dynamic month labels
+    for (let j = days; j >= 0; j -= 7) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - j);
+      const m = d.getMonth();
+      if (m !== lastMonth) {
+        monthLabels.push(d.toLocaleString("en", { month: "short" }));
+        lastMonth = m;
+      } else {
+        monthLabels.push("");
+      }
+    }
+
+    return (
+      <Box flexDirection="column" marginTop={1}>
+        <Text dimColor>{monthLabels.filter(Boolean).join("  ")}</Text>
+        {dots}
+      </Box>
+    );
   };
 
   const formatDuration = (ms: number) => {
@@ -195,8 +222,12 @@ export const StatsView: React.FC<StatsViewProps> = ({ projectRoot, onClose }) =>
           </Box>
 
           <Box flexDirection="row" marginBottom={1}>
-            <Text bold color={theme.primary}>All time</Text>
-            <Text dimColor>  ·  Last 7 days  ·  Last 30 days</Text>
+            <Text bold color={dateFilter === "all" ? theme.primary : theme.text}>All time</Text>
+            <Text dimColor>  ·  </Text>
+            <Text bold color={dateFilter === "7d" ? theme.primary : theme.text}>Last 7 days</Text>
+            <Text dimColor>  ·  </Text>
+            <Text bold color={dateFilter === "30d" ? theme.primary : theme.text}>Last 30 days</Text>
+            <Text dimColor>  (r to cycle)</Text>
           </Box>
 
           <Box flexDirection="row">

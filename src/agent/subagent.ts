@@ -1,7 +1,8 @@
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import type { LLMProvider, ProviderToolDef } from "./provider.js";
 
-export type SubAgentRole = "explore" | "general" | "planner" | "executor" | "reviewer" | "web_surfer";
+export type SubAgentRole = "explore" | "general" | "planner" | "executor" | "reviewer" | "web_surfer" | "browser_agent";
 
 export interface SubAgentConfig {
   type: SubAgentRole;
@@ -20,6 +21,24 @@ export interface SubAgentConfig {
   maxTurns?: number;
   /** Context to inject (e.g. plan, executor output, code to review) */
   context?: string;
+  /** LLM provider abstraction — when set, used instead of raw client.chat.completions */
+  provider?: LLMProvider;
+  /** Initial task description (used for progress UI) */
+  task?: string;
+  /** Progress callback */
+  onUpdate?: (status: SubAgentStatus) => void;
+}
+
+export interface SubAgentStatus {
+  id: string;
+  role: SubAgentRole;
+  task: string;
+  status: "running" | "done" | "error";
+  toolsCalled: number;
+  tokensUsed: number;
+  cost: number;
+  currentTool?: string;
+  result?: string;
 }
 
 const ROLE_PROMPTS: Record<SubAgentRole, string> = {
@@ -73,22 +92,32 @@ Be concise and actionable. Focus on real issues, not nitpicks.`,
 You have access to:
 - web_search: Search the web for information
 - web_fetch: Fetch and read web pages, documentation, and API docs
+- browser_action: Use a real browser for interactive sites, SPA, or when screenshots are needed
 
 Your workflow:
 1. Search for the relevant documentation or API reference
-2. Fetch the most relevant page(s)
-3. Extract the key information needed
-4. Return a concise, well-structured summary
+2. If the site is simple, use web_fetch.
+3. If the site is complex (interactive, requires scrolling, or is a Single Page App), use browser_action with 'navigate'.
+4. Use browser_action with 'extract' to understand the page structure via the Accessibility Tree.
+5. Use browser_action with 'click' or 'type' to interact if necessary.
+6. Return a concise, well-structured summary.
 
 Focus on:
-- Official documentation (not blog posts or StackOverflow unless official docs are unavailable)
-- API signatures, parameters, return types
-- Breaking changes, deprecations, version differences
-- Code examples that demonstrate correct usage
+- Official documentation and API signatures.
+- Code examples that demonstrate correct usage.
 
-Be thorough but concise. Include URLs of sources.
-When done, provide a clear summary with the exact API signatures, parameters, and usage patterns found.
-Do NOT guess or use prior knowledge — only report what you actually found on the web.`,
+Be thorough but concise. Include URLs of sources.`,
+
+  browser_agent: `You are a specialized Browser Automation Agent. Your job is to interact with web applications to perform tasks, extract data, or debug web-related issues.
+You have FULL control over a browser via browser_action.
+
+Your Guidelines:
+1. **Understand First**: Use 'navigate' then 'extract' to see the page's Accessibility Tree. This tree helps you "see" the interactive elements (buttons, inputs) better than raw HTML.
+2. **Be Patient**: Web pages take time to load. If content isn't there, wait a bit or use 'status'.
+3. **Confirm Visually**: If you're unsure if a button was clicked or a form filled, use 'screenshot' to see the current state.
+4. **Be Precise**: Use CSS selectors when possible, or text-based clicking (e.g. text="Login").
+
+When done, provide a detailed report of the task results and any extracted data.`,
 };
 
 /**
@@ -98,6 +127,20 @@ Do NOT guess or use prior knowledge — only report what you actually found on t
 export async function spawnSubAgent(config: SubAgentConfig): Promise<string> {
   const maxTurns = config.maxTurns ?? 10;
   const systemPrompt = ROLE_PROMPTS[config.type];
+  const id = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const status: SubAgentStatus = {
+    id,
+    role: config.type,
+    task: config.task || config.prompt.slice(0, 100),
+    status: "running",
+    toolsCalled: 0,
+    tokensUsed: 0,
+    cost: 0,
+  };
+
+  const notify = () => config.onUpdate?.({ ...status });
+
+  notify();
 
   const messages: ChatCompletionMessageParam[] = [
     { role: "system", content: systemPrompt },
@@ -110,44 +153,137 @@ export async function spawnSubAgent(config: SubAgentConfig): Promise<string> {
     messages.push({ role: "user", content: config.prompt });
   }
 
+  const toolDefs: ProviderToolDef[] = config.tools.map(t => ({
+    type: "function" as const,
+    function: {
+      name: t.function.name,
+      description: t.function.description,
+      parameters: t.function.parameters as Record<string, unknown>,
+    },
+  }));
+
   for (let turn = 0; turn < maxTurns; turn++) {
     try {
-      const response = await config.client.chat.completions.create({
-        model: config.model,
-        messages,
-        tools: config.tools,
-        temperature: 0,
-        max_tokens: 4096,
-      });
+      if (config.provider) {
+        // Use provider abstraction (supports Anthropic, Vertex, Bedrock, etc.)
+        const response = await config.provider.complete(messages, toolDefs, {
+          model: config.model,
+          temperature: 0,
+          maxTokens: 4096,
+        });
 
-      const choice = response.choices[0];
-      if (!choice) return "Sub-agent: No response from model";
-
-      const message = choice.message;
-      messages.push(message as ChatCompletionMessageParam);
-
-      // Done
-      if (!message.tool_calls) {
-        return message.content ?? "Sub-agent completed with no output.";
-      }
-
-      // Execute tools
-      for (const toolCall of message.tool_calls) {
-        let args: Record<string, unknown>;
-        try {
-          args = JSON.parse(toolCall.function.arguments);
-        } catch {
-          args = {};
+        if (!response.content && response.toolCalls.length === 0) {
+          return "Sub-agent: No response from model";
         }
 
-        const result = await config.toolExecutor(toolCall.function.name, args);
-        const truncated = result.content.slice(0, 3000);
+        // Build assistant message for history
+        const assistantMsg: ChatCompletionMessageParam = response.toolCalls.length > 0
+          ? {
+              role: "assistant",
+              content: response.content || null,
+              tool_calls: response.toolCalls.map(tc => ({
+                id: tc.id,
+                type: "function" as const,
+                function: { name: tc.name, arguments: tc.arguments },
+              })),
+            } as ChatCompletionMessageParam
+          : { role: "assistant", content: response.content };
 
-        messages.push({
-          role: "tool",
-          tool_call_id: toolCall.id,
-          content: truncated,
-        } as ChatCompletionMessageParam);
+        messages.push(assistantMsg);
+
+        // Update usage after model turn
+        if (response.usage) {
+          status.tokensUsed += response.usage.totalTokens;
+          status.cost += (response.usage.totalTokens / 1000000) * 3.00;
+          notify();
+        }
+
+        // Done — no tool calls
+        if (response.toolCalls.length === 0) {
+          status.status = "done";
+          status.result = response.content ?? "Sub-agent completed.";
+          notify();
+          return response.content ?? "Sub-agent completed with no output.";
+        }
+
+        // Execute tools
+        for (const toolCall of response.toolCalls) {
+          status.toolsCalled++;
+          
+          let args: Record<string, unknown>;
+          try {
+            args = JSON.parse(toolCall.arguments);
+          } catch {
+            args = {};
+          }
+
+          const argStr = Object.entries(args)
+            .map(([k, v]) => `${k}=${typeof v === 'string' ? v.slice(0, 40) + (v.length > 40 ? "..." : "") : JSON.stringify(v)}`)
+            .join(", ");
+          
+          status.currentTool = `${toolCall.name}(${argStr})`;
+          notify();
+
+          const result = await config.toolExecutor(toolCall.name, args);
+          const truncated = result.content.slice(0, 3000);
+
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: truncated,
+          } as ChatCompletionMessageParam);
+        }
+      } else {
+        // Fallback: direct OpenAI client (legacy path)
+        const response = await config.client.chat.completions.create({
+          model: config.model,
+          messages,
+          tools: config.tools,
+          temperature: 0,
+          max_tokens: 4096,
+        });
+
+        const choice = response.choices[0];
+        if (!choice) return "Sub-agent: No response from model";
+
+        const message = choice.message;
+        messages.push(message as ChatCompletionMessageParam);
+
+        // Done
+        if (!message.tool_calls) {
+          status.status = "done";
+          status.result = message.content ?? "Sub-agent completed.";
+          notify();
+          return message.content ?? "Sub-agent completed with no output.";
+        }
+
+        // Execute tools
+        for (const toolCall of message.tool_calls) {
+          status.toolsCalled++;
+          
+          let args: Record<string, unknown>;
+          try {
+            args = JSON.parse(toolCall.function.arguments);
+          } catch {
+            args = {};
+          }
+
+          const argStr = Object.entries(args)
+            .map(([k, v]) => `${k}=${typeof v === 'string' ? v.slice(0, 40) + (v.length > 40 ? "..." : "") : JSON.stringify(v)}`)
+            .join(", ");
+          
+          status.currentTool = `${toolCall.function.name}(${argStr})`;
+          notify();
+
+          const result = await config.toolExecutor(toolCall.function.name, args);
+          const truncated = result.content.slice(0, 3000);
+
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: truncated,
+          } as ChatCompletionMessageParam);
+        }
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -155,6 +291,9 @@ export async function spawnSubAgent(config: SubAgentConfig): Promise<string> {
     }
   }
 
+  status.status = "error";
+  status.result = `Sub-agent reached max turns (${maxTurns}).`;
+  notify();
   return `Sub-agent reached max turns (${maxTurns}). Last message may be incomplete.`;
 }
 

@@ -89,9 +89,18 @@ export class TokenCounter {
     const rates: Record<string, { input: number; output: number }> = {
       "gpt-4o": { input: 2.50 / 1_000_000, output: 10 / 1_000_000 },
       "gpt-4o-mini": { input: 0.15 / 1_000_000, output: 0.60 / 1_000_000 },
-      "gpt-5.2": { input: 5 / 1_000_000, output: 15 / 1_000_000 },
-      "claude-sonnet-4.6": { input: 3 / 1_000_000, output: 15 / 1_000_000 },
-      "claude-opus-4": { input: 15 / 1_000_000, output: 75 / 1_000_000 },
+      "gpt-4-turbo": { input: 10 / 1_000_000, output: 30 / 1_000_000 },
+      "gpt-4": { input: 30 / 1_000_000, output: 60 / 1_000_000 },
+      "o1": { input: 15 / 1_000_000, output: 60 / 1_000_000 },
+      "o1-mini": { input: 3 / 1_000_000, output: 12 / 1_000_000 },
+      "o3-mini": { input: 1.10 / 1_000_000, output: 4.40 / 1_000_000 },
+      "claude-3-5-sonnet-20241022": { input: 3 / 1_000_000, output: 15 / 1_000_000 },
+      "claude-3-5-haiku-20241022": { input: 0.80 / 1_000_000, output: 4 / 1_000_000 },
+      "claude-3-opus-20240229": { input: 15 / 1_000_000, output: 75 / 1_000_000 },
+      "gemini-1.5-pro": { input: 1.25 / 1_000_000, output: 5 / 1_000_000 },
+      "gemini-1.5-flash": { input: 0.075 / 1_000_000, output: 0.30 / 1_000_000 },
+      "deepseek-chat": { input: 0.27 / 1_000_000, output: 1.10 / 1_000_000 },
+      "deepseek-reasoner": { input: 0.55 / 1_000_000, output: 2.19 / 1_000_000 },
     };
 
     const rate = rates[model] ?? { input: 2 / 1_000_000, output: 8 / 1_000_000 };

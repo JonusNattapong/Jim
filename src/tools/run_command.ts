@@ -30,8 +30,11 @@ export const run_command_handler: ToolHandler = async (args) => {
   const command = args.command as string;
   const timeout = args.timeout as number | undefined;
 
+  const abortSignal = (args as any).__abortSignal as AbortSignal | undefined;
+
   return sandboxedExec(command, {
     timeout,
     projectRoot: process.cwd(),
+    __abortSignal: abortSignal,
   });
 };

@@ -1,1 +1,10 @@
 export { ContextManager } from "./manager.js";
+export { SessionManager } from "./sessions.js";
+export type { SessionData, CheckpointData } from "./sessions.js";
+export { MemoryManager } from "./memory.js";
+export type { MemoryLayer } from "./memory.js";
+export { ArchivalMemoryStore, getArchivalMemoryStore, resetArchivalMemoryStore } from "./memory-store.js";
+export type { MemoryEntry, SearchResult } from "./memory-store.js";
+export { UserPersonaManager } from "./persona.js";
+export type { UserPersona } from "./persona.js";
+export { TokenCounter, getTokenCounter } from "./tokens.js";

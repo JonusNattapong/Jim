@@ -55,6 +55,8 @@ export const youtube_transcript_handler: ToolHandler = async (args) => {
   const lang = (args.lang as string) ?? "en";
   const maxChars = (args.max_chars as number) ?? 15000;
 
+  const userSignal = (args as any).__abortSignal as AbortSignal | undefined;
+
   const videoId = extractVideoId(url);
   if (!videoId) {
     return { content: `Error: Invalid YouTube URL: ${url}`, isError: true };
@@ -73,7 +75,7 @@ export const youtube_transcript_handler: ToolHandler = async (args) => {
     const { stdout: jsonStdout } = await execFileAsync(
       "yt-dlp",
       ["--dump-json", "--no-download", `https://www.youtube.com/watch?v=${videoId}`],
-      { timeout: 30000 }
+      { timeout: 30000, signal: userSignal }
     );
 
     const info = JSON.parse(jsonStdout) as {
@@ -115,9 +117,19 @@ export const youtube_transcript_handler: ToolHandler = async (args) => {
       if (!subEntry?.url) continue;
 
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
-        const subRes = await fetch(subEntry.url, { signal: controller.signal });
+        // Combine user-provided abort signal with fetch timeout
+        const combined = new AbortController();
+        const timeout = setTimeout(() => combined.abort(), 15000);
+        if (userSignal) {
+          if (userSignal.aborted) {
+            clearTimeout(timeout);
+            combined.abort();
+          } else {
+            userSignal.addEventListener("abort", () => combined.abort(), { once: true });
+          }
+        }
+
+        const subRes = await fetch(subEntry.url, { signal: combined.signal });
         clearTimeout(timeout);
 
         if (!subRes.ok) continue;
