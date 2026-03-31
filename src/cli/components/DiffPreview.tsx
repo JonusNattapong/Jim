@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
+import { theme } from "../theme.js";
 
 interface DiffPreviewProps {
   filePath: string;
@@ -19,15 +20,15 @@ export const DiffPreview: React.FC<DiffPreviewProps> = ({ filePath, diff, linesA
     <Box flexDirection="column" marginTop={1}>
       {/* Header */}
       <Box>
-        <Text color="greenBright" bold>{filePath}</Text>
+        <Text color={theme.success} bold>{filePath}</Text>
         <Text dimColor>  </Text>
-        <Text color="green">+{linesAdded}</Text>
+        <Text color={theme.success}>+{linesAdded}</Text>
         <Text dimColor> </Text>
-        <Text color="red">-{linesRemoved}</Text>
+        <Text color={theme.error}>-{linesRemoved}</Text>
       </Box>
 
       {/* Diff body */}
-      <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1}>
+      <Box flexDirection="column" borderStyle="round" borderColor={theme.border} paddingX={1}>
         {shown.map((line, i) => {
           const isAdd = line.startsWith("+");
           const isRem = line.startsWith("-");
@@ -35,7 +36,7 @@ export const DiffPreview: React.FC<DiffPreviewProps> = ({ filePath, diff, linesA
 
           if (isHeader) {
             return (
-              <Text key={i} color="greenBright" dimColor>{line}</Text>
+              <Text key={i} color={theme.primary} dimColor>{line}</Text>
             );
           }
 
@@ -45,8 +46,8 @@ export const DiffPreview: React.FC<DiffPreviewProps> = ({ filePath, diff, linesA
           return (
             <Box key={i} paddingX={0}>
               <Text
-                backgroundColor={isAdd ? "#0a3a1e" : isRem ? "#3b1616" : undefined}
-                color={isAdd ? "#3fb950" : isRem ? "#f85149" : "gray"}
+                backgroundColor={isAdd ? theme.success : isRem ? theme.error : undefined}
+                color={isAdd ? theme.inverse : isRem ? theme.textBright : theme.border}
               >
                 {prefix}{body}
               </Text>

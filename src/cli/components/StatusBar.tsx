@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
+import { theme } from "../theme.js";
 
 interface StatusBarProps {
   turn: number;
@@ -20,11 +21,11 @@ export const StatusInfo: React.FC<StatusBarProps> = ({ turn, messageCount, sessi
   const shortSession = sessionId.slice(0, 8);
   return (
     <Box>
-      <Text dimColor>  � probe </Text>
-      <Text color="greenBright" dimColor>{turn}</Text>
-      <Text dimColor>  •  {messageCount} signals</Text>
+      <Text dimColor>  ● turn </Text>
+      <Text color={theme.primary} dimColor>{turn}</Text>
+      <Text dimColor>  •  {messageCount} messages</Text>
       <Text dimColor>  •  </Text>
-      <Text color="greenBright" dimColor>{shortSession}</Text>
+      <Text color={theme.secondary} dimColor>{shortSession}</Text>
     </Box>
   );
 };

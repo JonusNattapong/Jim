@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
+import { theme } from "../theme.js";
 import { MarkdownText } from "./MarkdownText.js";
 
 interface MessageProps {
@@ -11,8 +12,8 @@ export const Message: React.FC<MessageProps> = ({ role, content }) => {
   if (role === "user") {
     return (
       <Box marginTop={1} flexDirection="row">
-        <Text color="greenBright" bold>You: </Text>
-        <Text bold color="white">{content}</Text>
+        <Text color={theme.primary} bold>You: </Text>
+        <Text bold color={theme.text}>{content}</Text>
       </Box>
     );
   }
@@ -21,9 +22,9 @@ export const Message: React.FC<MessageProps> = ({ role, content }) => {
     return (
       <Box marginTop={1} flexDirection="row">
         <Box flexDirection="column" marginRight={1}>
-          <Text color="greenBright">▌</Text>
+          <Text color={theme.secondary}>▌</Text>
           {content.split("\n").slice(1).map((_, i) => (
-            <Text key={i} color="greenBright">▌</Text>
+            <Text key={i} color={theme.secondary}>▌</Text>
           ))}
         </Box>
         <Box flexDirection="column" flexShrink={1}>

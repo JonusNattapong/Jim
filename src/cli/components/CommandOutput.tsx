@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
+import { theme } from "../theme.js";
 
 export interface CommandOutputEntry {
   type: "success" | "error" | "info" | "list";
@@ -15,7 +16,7 @@ export const CommandOutput: React.FC<CommandOutputProps> = ({ output }) => {
   if (!output) return null;
 
   const icon = output.type === "error" ? "✗" : output.type === "success" ? "✓" : "◇";
-  const color = output.type === "error" ? "red" : output.type === "success" ? "green" : "cyan";
+  const color = output.type === "error" ? theme.error : output.type === "success" ? theme.success : theme.primary;
 
   return (
     <Box flexDirection="column" marginTop={1} marginLeft={2}>

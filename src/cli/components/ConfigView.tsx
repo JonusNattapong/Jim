@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
+import { theme } from "../theme.js";
 
 interface ConfigItem {
   key: string;
@@ -62,11 +63,11 @@ export const ConfigView: React.FC<ConfigViewProps> = ({ config, onClose, onUpdat
   });
 
   return (
-    <Box flexDirection="column" padding={1} borderStyle="single" borderColor="greenBright">
+    <Box flexDirection="column" padding={1} borderStyle="single" borderColor={theme.primary}>
       <Box marginBottom={1}>
         {["Settings", "Status", "Usage"].map(t => (
-            <Box key={t} marginRight={2} paddingX={1} backgroundColor={tab === t ? "greenBright" : undefined}>
-                <Text bold color={tab === t ? "black" : "gray"}>{t}</Text>
+            <Box key={t} marginRight={2} paddingX={1} backgroundColor={tab === t ? theme.primary : undefined}>
+                <Text bold color={tab === t ? theme.inverse : theme.border}>{t}</Text>
             </Box>
         ))}
         <Text dimColor>(←/→ or tab to cycle)</Text>
@@ -76,9 +77,9 @@ export const ConfigView: React.FC<ConfigViewProps> = ({ config, onClose, onUpdat
         <Text italic dimColor>Configure Jim preferences</Text>
       </Box>
 
-      <Box borderStyle="round" borderColor="white" paddingX={1} marginBottom={1}>
+      <Box borderStyle="round" borderColor={theme.text} paddingX={1} marginBottom={1}>
         <Text dimColor>⌕ </Text>
-        <Text color="white">{search}</Text>
+        <Text color={theme.text}>{search}</Text>
         {search === "" && <Text dimColor italic>Search settings...</Text>}
       </Box>
 
@@ -87,20 +88,20 @@ export const ConfigView: React.FC<ConfigViewProps> = ({ config, onClose, onUpdat
           {filteredItems.map((item, i) => {
             const isSelected = i === selectedIndex;
             let displayValue = String(item.value);
-            let valueColor = "white";
+            let valueColor = theme.text;
             
             if (item.type === "boolean") {
-              valueColor = item.value ? "green" : "red";
+              valueColor = item.value ? theme.success : theme.error;
               displayValue = item.value ? "true" : "false";
             } else if (item.type === "enum") {
-              valueColor = "greenBright";
+              valueColor = theme.primary;
             }
 
             return (
               <Box key={item.key}>
-                <Text color="greenBright">{isSelected ? "> " : "  "}</Text>
+                <Text color={theme.primary}>{isSelected ? "> " : "  "}</Text>
                 <Box width={40}>
-                  <Text bold={isSelected} color={isSelected ? "white" : "gray"}>
+                  <Text bold={isSelected} color={isSelected ? theme.text : theme.border}>
                     {item.label}
                   </Text>
                 </Box>
@@ -115,7 +116,7 @@ export const ConfigView: React.FC<ConfigViewProps> = ({ config, onClose, onUpdat
         </Box>
       )}
 
-      <Box marginTop={1} paddingTop={1} borderTop borderStyle="single" borderColor="gray">
+      <Box marginTop={1} paddingTop={1} borderTop borderStyle="single" borderColor={theme.border}>
         <Text dimColor>Type to filter  ·  Enter/↓ to select  ·  Esc to clear/close</Text>
       </Box>
     </Box>

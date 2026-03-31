@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
+import { theme } from "../theme.js";
 import { TaskBoard, parseTaskBoard } from "./TaskBoard.js";
 import { ExpandableBlock } from "./ExpandableBlock.js";
 
@@ -36,9 +37,9 @@ const AnimatedScanner: React.FC<{ name: string; args: string }> = ({ name, args 
 
   return (
     <Box>
-      <Text color="greenBright" bold>[{bar.join("")}] </Text>
-      <Text color="greenBright">executing ➡ </Text>
-      <Text color="white" bold>{name} </Text>
+      <Text color={theme.primary} bold>[{bar.join("")}] </Text>
+      <Text color={theme.primary}>executing ➡ </Text>
+      <Text color={theme.text} bold>{name} </Text>
       <Text dimColor>{args.slice(0, 40)}{args.length > 40 ? "..." : ""}</Text>
     </Box>
   );
@@ -51,9 +52,9 @@ export const ToolActivity: React.FC<ToolActivityProps> = ({ calls }) => {
     if (call.status === "pending_approval") {
       return (
         <Box>
-          <Text color="yellow">*</Text>
+          <Text color={theme.warning}>*</Text>
           <Text> </Text>
-          <Text color="yellow" bold>{call.name}</Text>
+          <Text color={theme.warning} bold>{call.name}</Text>
           <Text dimColor> waiting for approval</Text>
         </Box>
       );
@@ -61,9 +62,9 @@ export const ToolActivity: React.FC<ToolActivityProps> = ({ calls }) => {
 
     return (
       <Box>
-        <Text color="greenBright">•</Text>
+        <Text color={theme.primary}>•</Text>
         <Text> </Text>
-        <Text color="greenBright" bold>{call.name}</Text>
+        <Text color={theme.primary} bold>{call.name}</Text>
         <Text dimColor> awaiting transmission</Text>
       </Box>
     );
@@ -84,12 +85,12 @@ export const ToolActivity: React.FC<ToolActivityProps> = ({ calls }) => {
               <Box>
                 <Text dimColor>  </Text>
                 {call.status === "error" ? (
-                  <Text color="red">✗</Text>
+                  <Text color={theme.error}>✗</Text>
                 ) : (
-                  <Text color="green">✓</Text>
+                  <Text color={theme.success}>✓</Text>
                 )}
                 <Text> </Text>
-                <Text color={call.status === "error" ? "red" : "greenBright"} bold>{call.name}</Text>
+                <Text color={call.status === "error" ? theme.error : theme.success} bold>{call.name}</Text>
                 <Text dimColor> {call.args.slice(0, 60)}{call.args.length > 60 ? "..." : ""}</Text>
               </Box>
             )}
@@ -109,19 +110,19 @@ export const ToolActivity: React.FC<ToolActivityProps> = ({ calls }) => {
             ) : null}
 
             {call.diff && (
-              <Box flexDirection="column" marginLeft={2} marginTop={1} borderStyle="round" borderColor="gray" paddingX={1}>
+              <Box flexDirection="column" marginLeft={2} marginTop={1} borderStyle="round" borderColor={theme.border} paddingX={1}>
                 {call.diff.split("\n").map((line, j) => {
                   const isAdd = line.startsWith("+");
                   const isRem = line.startsWith("-");
                   const isHeader = line.startsWith("@@") || line.startsWith("---") || line.startsWith("+++");
                   
                   if (isHeader) {
-                    return <Text key={j} color="greenBright" dimColor>{line}</Text>;
+                    return <Text key={j} color={theme.primary} dimColor>{line}</Text>;
                   }
 
                   return (
-                    <Box key={j} paddingX={1} backgroundColor={isAdd ? "#0a3a1e" : isRem ? "#3b1616" : undefined}>
-                      <Text color={isAdd ? "#3fb950" : isRem ? "#f85149" : "gray"}>
+                    <Box key={j} paddingX={1} backgroundColor={isAdd ? theme.success : isRem ? theme.error : undefined}>
+                      <Text color={isAdd ? theme.inverse : isRem ? theme.textBright : theme.border}>
                         {line}
                       </Text>
                     </Box>

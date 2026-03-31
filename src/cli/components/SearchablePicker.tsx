@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Box, Text, useInput } from "ink";
 import TextInput from "ink-text-input";
+import { theme } from "../theme.js";
 
 export interface SearchablePickerItem {
   label: string;
@@ -120,13 +121,13 @@ export const SearchablePicker: React.FC<SearchablePickerProps> = ({
   });
 
   return (
-    <Box flexDirection="column" marginLeft={2} marginTop={1} borderStyle="round" borderColor="yellow" paddingX={1}>
+    <Box flexDirection="column" marginLeft={2} marginTop={1} borderStyle="round" borderColor={theme.warning} paddingX={1}>
       <Box justifyContent="space-between">
-        <Text bold color="yellow">{title}</Text>
+        <Text bold color={theme.warning}>{title}</Text>
         <Text dimColor>esc</Text>
       </Box>
       <Box marginTop={1}>
-        <Text color="greenBright">Search </Text>
+        <Text color={theme.primary}>Search </Text>
         <TextInput value={query} onChange={setQuery} placeholder="type to filter..." />
       </Box>
       <Box marginTop={1} marginBottom={1}>
@@ -141,7 +142,7 @@ export const SearchablePicker: React.FC<SearchablePickerProps> = ({
           if (entry.type === "heading") {
             return (
               <Box key={entry.id} marginTop={1}>
-                <Text bold color="yellow">{entry.label}</Text>
+                <Text bold color={theme.warning}>{entry.label}</Text>
               </Box>
             );
           }
@@ -153,7 +154,7 @@ export const SearchablePicker: React.FC<SearchablePickerProps> = ({
           const recent = recents.includes(item.value);
           return (
             <Box key={item.value} flexDirection="column" marginBottom={1}>
-              <Text color={active ? "black" : "white"} backgroundColor={active ? "yellow" : undefined}>
+              <Text color={active ? theme.inverse : theme.text} backgroundColor={active ? theme.warning : undefined}>
                 {active ? "❯ " : "  "}
                 {favorite ? "★ " : recent ? "• " : "  "}
                 {item.label}

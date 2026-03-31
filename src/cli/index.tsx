@@ -13,6 +13,20 @@ import { shutdownLogger } from "../utils/logger.js";
 
 // ─── Config ────────────────────────────────────────────
 
+function normalizeColorEnv(): void {
+  if (process.env.NO_COLOR) {
+    delete process.env.NO_COLOR;
+  }
+
+  if (!process.env.FORCE_COLOR) {
+    process.env.FORCE_COLOR = "1";
+  }
+
+  if (!process.env.TERM || process.env.TERM === "dumb") {
+    process.env.TERM = "xterm-256color";
+  }
+}
+
 function loadConfig(): AgentConfig {
   const projectRoot = process.cwd();
   const presetId = process.env.PROVIDER_PRESET ?? loadSavedProviderSelection(projectRoot) ?? "openai";
@@ -52,16 +66,24 @@ async function closeAgent(agent: Agent): Promise<void> {
 // ─── Main ──────────────────────────────────────────────
 
 async function main(): Promise<void> {
+  normalizeColorEnv();
   const config = loadConfig();
   const agent = new Agent(config);
-  const logo = `
-      JIM - Xenocode AI
-      ╭──────────────────────────────╮
-      │  Intergalactic Intelligence   │
-      │  Code Hard, Beam Further      │
-      ╰──────────────────────────────╯
-  `;
-
+  const logo = `                                                                                                        
+👾 JIM - JimCode                
+.    ░░░░░░░░   ░▒▒▓▓▓▓▓▒▒▒░
+              .  ░░░░░░      ░░░▒▓▓▓▓▓▓▓▒▒░░          
+░░▒▒▒░░     *      ░░░░░░░░░░░░    .             
+                            *             *                    
+       █████ █████ ██████   ██████
+      ░░███ ░░███ ░░██████ ██████ 
+       ░███  ░███  ░███░█████░███        ██▓▒░░ .
+    .  ░███  ░███  ░███░░███ ░███      ███░░  ▒░  
+       ░███  ░███ *░███ ░░░  ░███     ██▒░
+ ███   ░███ .░███  ░███   .  ░███  .  ██▒░   *
+░░████████   █████ █████     █████     ███░    ▓  .
+  ░░░░░░░░ * ░░░░░ ░░░░░   * ░░░░░       ▒████░
+`;
   if (process.argv.includes("--smoke-exit")) {
     await closeAgent(agent);
     console.log("smoke:ok");
@@ -111,7 +133,7 @@ async function main(): Promise<void> {
   process.once("SIGTERM", () => handleShutdown(0));
 
   const sessionId = agent.getSessionId() || "new_session_" + Date.now().toString(36).slice(-6);
-  
+
   // Render Ink app
   const { render } = await import("ink");
   const { waitUntilExit } = render(
@@ -125,11 +147,11 @@ async function main(): Promise<void> {
 
   await waitUntilExit();
   await closeAgent(agent);
-  
+
   // ASCII Banner on exit
-  console.log(gradient.cristal.multiline(logo));
+  console.log(gradient.atlas.multiline(logo));
   console.log(`  \x1b[3m\x1b[90m${getRandomTag()}\x1b[0m\n`);
-  
+
   // Session Info
   const finalSessionId = agent.getSessionId() || sessionId;
   console.log(`  \x1b[90mSession\x1b[0m   \x1b[1mJim AI Coding Agent \x1b[36m${config.model}\x1b[0m`);

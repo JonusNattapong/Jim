@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
 import { SessionManager, SessionData } from "../../context/sessions.js";
 import { getTokenCounter } from "../../context/tokens.js";
+import { theme } from "../theme.js";
 
 interface StatsData {
   totalTokens: number;
@@ -134,7 +135,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ projectRoot, onClose }) =>
   if (loading) {
     return (
       <Box padding={1}>
-        <Text color="yellow">Scanning sessions and computing stats...</Text>
+        <Text color={theme.warning}>Scanning sessions and computing stats...</Text>
       </Box>
     );
   }
@@ -152,7 +153,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ projectRoot, onClose }) =>
             d.setDate(today.getDate() - (j + i));
             const key = d.toISOString().split("T")[0];
             const activity = data.dailyActivity[key] || 0;
-            const color = activity > 10 ? "red" : activity > 5 ? "redBright" : activity > 0 ? "white" : "gray";
+            const color = activity > 10 ? theme.error : activity > 5 ? theme.warning : activity > 0 ? theme.text : theme.border;
             const char = activity > 0 ? "■" : "·";
             row.push(<Text key={key} color={color} dimColor={activity === 0}>{char} </Text>);
         }
@@ -170,13 +171,13 @@ export const StatsView: React.FC<StatsViewProps> = ({ projectRoot, onClose }) =>
   };
 
   return (
-    <Box flexDirection="column" padding={1} borderStyle="single" borderColor="red">
+    <Box flexDirection="column" padding={1} borderStyle="single" borderColor={theme.secondary}>
       <Box marginBottom={1}>
-        <Box marginRight={2} paddingX={1} backgroundColor={tab === "Overview" ? "red" : undefined}>
-          <Text bold color={tab === "Overview" ? "white" : "gray"}>Overview</Text>
+        <Box marginRight={2} paddingX={1} backgroundColor={tab === "Overview" ? theme.secondary : undefined}>
+          <Text bold color={tab === "Overview" ? theme.text : theme.border}>Overview</Text>
         </Box>
-        <Box paddingX={1} backgroundColor={tab === "Models" ? "red" : undefined}>
-          <Text bold color={tab === "Models" ? "white" : "gray"}>Models</Text>
+        <Box paddingX={1} backgroundColor={tab === "Models" ? theme.secondary : undefined}>
+          <Text bold color={tab === "Models" ? theme.text : theme.border}>Models</Text>
         </Box>
         <Box marginLeft={2}>
           <Text dimColor>(←/→ or tab to cycle)</Text>
@@ -194,7 +195,7 @@ export const StatsView: React.FC<StatsViewProps> = ({ projectRoot, onClose }) =>
           </Box>
 
           <Box flexDirection="row" marginBottom={1}>
-            <Text color="red" bold>All time</Text>
+            <Text bold color={theme.primary}>All time</Text>
             <Text dimColor>  ·  Last 7 days  ·  Last 30 days</Text>
           </Box>
 
@@ -202,60 +203,60 @@ export const StatsView: React.FC<StatsViewProps> = ({ projectRoot, onClose }) =>
             <Box flexDirection="column" width={40}>
               <Box>
                 <Text dimColor>Favorite model: </Text>
-                <Text color="greenBright">{data.favoriteModel}</Text>
+                <Text color={theme.success}>{data.favoriteModel}</Text>
               </Box>
               <Box marginTop={1}>
                 <Text dimColor>Sessions: </Text>
-                <Text color="white">{data.sessionsCount}</Text>
+                <Text color={theme.text}>{data.sessionsCount}</Text>
               </Box>
               <Box>
                 <Text dimColor>Active days: </Text>
-                <Text color="white">{data.activeDays}</Text>
+                <Text color={theme.text}>{data.activeDays}</Text>
               </Box>
               <Box>
                 <Text dimColor>Most active day: </Text>
-                <Text color="white">{data.mostActiveDay}</Text>
+                <Text color={theme.text}>{data.mostActiveDay}</Text>
               </Box>
             </Box>
             <Box flexDirection="column">
               <Box>
                 <Text dimColor>Total tokens: </Text>
-                <Text color="white">{(data.totalTokens / 1_000_000).toFixed(1)}m</Text>
+                <Text color={theme.text}>{(data.totalTokens / 1_000_000).toFixed(1)}m</Text>
               </Box>
               <Box marginTop={1}>
                 <Text dimColor>Longest session: </Text>
-                <Text color="greenBright">{formatDuration(data.longestSession)}</Text>
+                <Text color={theme.success}>{formatDuration(data.longestSession)}</Text>
               </Box>
               <Box>
                 <Text dimColor>Longest streak: </Text>
-                <Text color="white">{data.longestStreak} days</Text>
+                <Text color={theme.text}>{data.longestStreak} days</Text>
               </Box>
               <Box>
                 <Text dimColor>Current streak: </Text>
-                <Text color="white">{data.currentStreak} days</Text>
+                <Text color={theme.text}>{data.currentStreak} days</Text>
               </Box>
             </Box>
           </Box>
 
           <Box marginTop={1}>
-            <Text color="greenBright">Your longest session is ~{(data.longestSession / (45 * 60 * 1000)).toFixed(1)}x longer than listening to Abbey Road</Text>
+            <Text color={theme.success}>Your longest session is ~{(data.longestSession / (45 * 60 * 1000)).toFixed(1)}x longer than listening to Abbey Road</Text>
           </Box>
         </Box>
       ) : (
         <Box flexDirection="column">
-            <Text bold color="white">Model Usage (Tokens)</Text>
+            <Text bold color={theme.text}>Model Usage (Tokens)</Text>
             {Object.entries(data.modelUsage).sort((a,b) => b[1] - a[1]).map(([m, val]) => (
                 <Box key={m} marginTop={1}>
                     <Box width={30}>
-                        <Text color="greenBright">{m}</Text>
+                        <Text color={theme.success}>{m}</Text>
                     </Box>
-                    <Text color="white">{(val / 1000).toFixed(1)}k tokens</Text>
+                    <Text color={theme.text}>{(val / 1000).toFixed(1)}k tokens</Text>
                 </Box>
             ))}
         </Box>
       )}
 
-      <Box marginTop={1} paddingTop={1} borderStyle="round" borderTop={true} borderBottom={false} borderLeft={false} borderRight={false} borderColor="gray">
+      <Box marginTop={1} paddingTop={1} borderStyle="round" borderTop={true} borderBottom={false} borderLeft={false} borderRight={false} borderColor={theme.border}>
         <Text dimColor>Esc to cancel  ·  r to cycle dates</Text>
       </Box>
     </Box>

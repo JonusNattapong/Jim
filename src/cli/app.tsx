@@ -22,6 +22,7 @@ import type { AgentCallbacks } from "../agent/index.js";
 import type { PermissionMode } from "../permissions/manager.js";
 import { loadCliUiState, pushRecent, saveCliUiState, toggleFavorite } from "./ui-state.js";
 import { formatProviderDescription, formatConnectionListItem } from "../config/provider-presets.js";
+import { theme } from "./theme.js";
 
 // ─── Types ─────────────────────────────────────────────
 
@@ -1007,7 +1008,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       {streaming && streamBuffer && isProcessing && !thoughtProcess && (
         <Box marginTop={1} flexDirection="row">
           <Box flexDirection="column" marginRight={1}>
-            <Text color="green">▌</Text>
+            <Text color={theme.secondary}>▌</Text>
           </Box>
           <Box flexDirection="column" flexShrink={1}>
             <Text>{streamBuffer}</Text>
@@ -1020,10 +1021,10 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
 
       {/* Plan approval prompt */}
       {!agent.isPlanApproved() && activeTools.some(t => t.name === "todo_write" && t.status === "done") && (
-        <Box borderStyle="double" borderColor="yellow" padding={1} marginY={1}>
-          <Text bold color="yellow">⚠️ PLAN PENDING APPROVAL</Text>
+        <Box borderStyle="double" borderColor={theme.warning} padding={1} marginY={1}>
+          <Text bold color={theme.warning}>PLAN PENDING APPROVAL</Text>
           <Text> Review the plan above. If it looks good, type </Text>
-          <Text color="cyan" bold>/approve</Text>
+          <Text color={theme.primary} bold>/approve</Text>
           <Text> to authorize Jim.</Text>
         </Box>
       )}
@@ -1071,10 +1072,10 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
             return suggestions.map((s, i) => {
               const isSelected = i === suggestionIndex;
               return (
-                <Box key={i} backgroundColor={isSelected ? "cyan" : undefined}>
-                  <Text color={isSelected ? "black" : "cyan"} bold={isSelected}> {isSelected ? "❯" : " "}</Text>
-                  <Text color={isSelected ? "black" : "cyan"} bold> {s.label.padEnd(s.desc ? 12 : 0)}</Text>
-                  {s.desc && <Text color={isSelected ? "black" : "gray"}> {s.desc}</Text>}
+                <Box key={i} backgroundColor={isSelected ? theme.primary : undefined}>
+                  <Text color={isSelected ? theme.inverse : theme.primary} bold={isSelected}> {isSelected ? "❯" : " "}</Text>
+                  <Text color={isSelected ? theme.inverse : theme.primary} bold> {s.label.padEnd(s.desc ? 12 : 0)}</Text>
+                  {s.desc && <Text color={isSelected ? theme.inverse : theme.border}> {s.desc}</Text>}
                 </Box>
               );
             });
@@ -1128,7 +1129,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       {/* Input */}
       {!permRequest && !selector && !connectModal && (
         <Box marginTop={0}>
-          <Text bold color="yellow">❯ </Text>
+          <Text bold color={theme.warning}>❯ </Text>
           <TextInput
             value={input}
             onChange={setInput}

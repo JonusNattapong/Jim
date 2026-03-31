@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
+import { theme } from "../theme.js";
 
 interface ThoughtProcessProps {
   content: string;
@@ -27,22 +28,22 @@ export const ThoughtProcess: React.FC<ThoughtProcessProps> = ({ content, isStrea
     <Box flexDirection="column" marginTop={1} marginLeft={2}>
       {/* Label */}
       <Box>
-        <Text color="gray" bold>thinking</Text>
+        <Text color={theme.border} bold>thinking</Text>
         {elapsed != null && elapsed > 0 && (
           <Text dimColor> ({elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`})</Text>
         )}
         {isStreaming && (
-          <Text color="gray"> {cursor ? "▋" : " "}</Text>
+          <Text color={theme.border}> {cursor ? "▋" : " "}</Text>
         )}
       </Box>
 
       {/* Content - faded gray */}
-      <Box flexDirection="column" marginLeft={1} borderStyle="round" borderColor="#333333" paddingX={1}>
+      <Box flexDirection="column" marginLeft={1} borderStyle="round" borderColor={theme.border} paddingX={1}>
         {truncated && (
           <Text dimColor italic>... {lines.length - maxLines} earlier lines hidden</Text>
         )}
         {shown.map((line, i) => (
-          <Text key={i} color="#666666" italic>
+          <Text key={i} color={theme.text} italic>
             {line || " "}
           </Text>
         ))}

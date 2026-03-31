@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Text, useInput } from "ink";
+import { theme } from "../theme.js";
 import { DiffPreview } from "./DiffPreview.js";
 
 interface DiffPreviewData {
@@ -48,17 +49,17 @@ export const PermissionPrompt: React.FC<PermissionPromptProps> = ({ toolName, ar
   const isFileTool = toolName === "edit_file" || toolName === "write_file";
 
   return (
-    <Box marginLeft={2} marginTop={1} flexDirection="column" borderStyle="round" borderColor="yellow" paddingX={1}>
+    <Box marginLeft={2} marginTop={1} flexDirection="column" borderStyle="round" borderColor={theme.warning} paddingX={1}>
       {/* Header */}
       <Box>
-        <Text color="yellow" bold>{toolIcon(toolName)} </Text>
-        <Text color="yellow" bold>Allow {toolVerb(toolName)}?</Text>
+        <Text color={theme.warning} bold>{toolIcon(toolName)} </Text>
+        <Text color={theme.warning} bold>Allow {toolVerb(toolName)}?</Text>
       </Box>
 
       {/* Tool info */}
       <Box marginLeft={1}>
         <Text dimColor>tool </Text>
-        <Text color="greenBright" bold>{toolName}</Text>
+        <Text color={theme.success} bold>{toolName}</Text>
         {!isFileTool && (
           <>
             <Text dimColor>  args </Text>
@@ -88,9 +89,9 @@ export const PermissionPrompt: React.FC<PermissionPromptProps> = ({ toolName, ar
 
       {/* Action keys */}
       <Box marginLeft={1} marginTop={1}>
-        <Text color="green" bold>Y</Text>
+        <Text color={theme.success} bold>Y</Text>
         <Text dimColor> accept  </Text>
-        <Text color="red" bold>N</Text>
+        <Text color={theme.error} bold>N</Text>
         <Text dimColor> reject</Text>
       </Box>
     </Box>

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Box, Text, useInput } from "ink";
 import TextInput from "ink-text-input";
+import { theme } from "../theme.js";
 
 export interface ConnectField {
   key: string;
@@ -54,9 +55,9 @@ export const ConnectModal: React.FC<ConnectModalProps> = ({
   const activeValue = activeField ? (values[activeField.key] ?? "") : "";
 
   return (
-    <Box flexDirection="column" marginLeft={2} marginTop={1} borderStyle="round" borderColor="green" paddingX={1}>
+    <Box flexDirection="column" marginLeft={2} marginTop={1} borderStyle="round" borderColor={theme.success} paddingX={1}>
       <Box justifyContent="space-between">
-        <Text bold color="green">{title}</Text>
+        <Text bold color={theme.success}>{title}</Text>
         <Text dimColor>esc</Text>
       </Box>
       <Text dimColor>{description}</Text>
@@ -67,7 +68,7 @@ export const ConnectModal: React.FC<ConnectModalProps> = ({
           const visibleValue = field.secret && value ? "*".repeat(Math.min(value.length, 12)) : value;
           return (
             <Box key={field.key} flexDirection="column">
-              <Text color={active ? "black" : "white"} backgroundColor={active ? "green" : undefined}>
+              <Text color={active ? theme.inverse : theme.text} backgroundColor={active ? theme.success : undefined}>
                 {active ? "❯ " : "  "}
                 {field.label}{field.required ? " *" : ""}: {visibleValue || "<empty>"}
               </Text>
@@ -82,7 +83,7 @@ export const ConnectModal: React.FC<ConnectModalProps> = ({
       </Box>
       {activeField && (
         <Box marginTop={1}>
-          <Text color="greenBright">{activeField.label} </Text>
+          <Text color={theme.primary}>{activeField.label} </Text>
           <TextInput
             value={activeValue}
             onChange={(next) => setValues((prev) => ({ ...prev, [activeField.key]: next }))}
@@ -105,7 +106,7 @@ export const ConnectModal: React.FC<ConnectModalProps> = ({
       </Box>
       {missingRequired.length > 0 && (
         <Box marginTop={1} flexDirection="column">
-          <Text color="yellow">Missing required:</Text>
+          <Text color={theme.warning}>Missing required:</Text>
           {missingRequired.map((item) => (
             <Text key={item} dimColor>  {item}</Text>
           ))}

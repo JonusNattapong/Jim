@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
+import { theme } from "../theme.js";
 
 export interface TaskBoardItem {
   index: number;
@@ -29,12 +30,12 @@ const STATUS_LABEL: Record<TaskBoardItem["status"], string> = {
   cancelled: "cancelled",
 };
 
-const STATUS_COLOR: Record<TaskBoardItem["status"], "gray" | "yellow" | "red" | "green"> = {
-  pending: "gray",
-  in_progress: "yellow",
-  blocked: "red",
-  completed: "green",
-  cancelled: "gray",
+const STATUS_COLOR: Record<TaskBoardItem["status"], string> = {
+  pending: theme.border,
+  in_progress: theme.warning,
+  blocked: theme.error,
+  completed: theme.success,
+  cancelled: theme.border,
 };
 
 function parsePriority(token: string): TaskBoardItem["priority"] {
@@ -153,9 +154,9 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ board }) => {
   const remaining = Math.max(board.total - board.completed, 0);
 
   return (
-    <Box borderStyle="round" borderColor="greenBright" paddingX={1} paddingY={0} marginTop={1} marginLeft={4} flexDirection="column">
+    <Box borderStyle="round" borderColor={theme.primary} paddingX={1} paddingY={0} marginTop={1} marginLeft={4} flexDirection="column">
       <Box justifyContent="space-between">
-        <Text color="greenBright">{board.completed} of {board.total} anomalies resolved</Text>
+        <Text color={theme.primary}>{board.completed} of {board.total} tasks resolved</Text>
         <Text dimColor>{board.title}</Text>
       </Box>
 
@@ -166,9 +167,9 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ board }) => {
             <Text> </Text>
             <Text dimColor>{item.index + 1}.</Text>
             <Text> </Text>
-            <Text color={item.priority === "high" ? "red" : item.priority === "low" ? "blue" : "magentaBright"}>{priorityAccent(item.priority)}</Text>
+            <Text color={item.priority === "high" ? theme.error : item.priority === "low" ? theme.secondary : theme.accent}>{priorityAccent(item.priority)}</Text>
             <Text> </Text>
-            <Text bold color={item.status === "completed" ? "gray" : "white"}>{item.content}</Text>
+            <Text bold color={item.status === "completed" ? theme.border : theme.text}>{item.content}</Text>
           </Box>
 
           <Box marginLeft={4}>

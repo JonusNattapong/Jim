@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Text } from "ink";
 import { highlight } from "cli-highlight";
+import { theme } from "../theme.js";
 
 /**
  * Premium Markdown renderer for Ink terminal.
@@ -38,7 +39,7 @@ function parseInline(line: string): InlineSegment[] {
 
     if (match[1]) {
       // Inline code: `code`
-      segments.push({ text: ` ${match[1].slice(1, -1)} `, code: true, color: "yellowBright" });
+      segments.push({ text: ` ${match[1].slice(1, -1)} `, code: true, color: theme.warning });
     } else if (match[2]) {
       // Bold: **text**
       segments.push({ text: match[2].slice(2, -2), bold: true });
@@ -50,7 +51,7 @@ function parseInline(line: string): InlineSegment[] {
       segments.push({ text: match[4].slice(1, -1), italic: true, dimColor: true });
     } else if (match[5]) {
       // Link: [text](url)
-      segments.push({ text: match[6], bold: true, color: "cyan", url: match[7] });
+      segments.push({ text: match[6], bold: true, color: theme.primary, url: match[7] });
     }
 
     lastIndex = match.index + match[0].length;
@@ -72,7 +73,7 @@ function renderInline(segments: InlineSegment[], key?: string): React.ReactNode 
       {segments.map((seg, i) => {
         if (seg.code) {
           return (
-            <Text key={i} color="yellow" bold inverse>{seg.text}</Text>
+            <Text key={i} color={theme.warning} bold inverse>{seg.text}</Text>
           );
         }
         return (
@@ -231,22 +232,22 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
           case "heading": {
             const level = block.level ?? 1;
             if (level === 1) {
-              return (
-                <Box key={i} flexDirection="column" marginTop={1}>
-                  <Text bold color="greenBright">{block.lines[0]}</Text>
-                </Box>
-              );
-            }
-            if (level === 2) {
-              return (
-                <Box key={i} marginTop={1}>
-                  <Text bold color="greenBright">{block.lines[0]}</Text>
-                </Box>
-              );
-            }
+            return (
+              <Box key={i} flexDirection="column" marginTop={1}>
+                <Text bold color={theme.primary}>{block.lines[0]}</Text>
+              </Box>
+            );
+          }
+          if (level === 2) {
             return (
               <Box key={i} marginTop={1}>
-                <Text bold color="yellow">▸ {block.lines[0]}</Text>
+                <Text bold color={theme.primary}>{block.lines[0]}</Text>
+              </Box>
+            );
+          }
+          return (
+            <Box key={i} marginTop={1}>
+              <Text bold color={theme.accent}>▸ {block.lines[0]}</Text>
               </Box>
             );
           }
@@ -273,16 +274,16 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
             return (
               <Box key={i} flexDirection="column" marginTop={1} marginBottom={1} marginLeft={2}>
                 {block.lang && (
-                  <Text dimColor>  {block.lang}</Text>
+                  <Text color={theme.secondary}>  {block.lang}</Text>
                 )}
-                <Text dimColor>{topBorder}</Text>
+                <Text color={theme.border}>{topBorder}</Text>
                 {highlightedLines.map((line, j) => (
                   <Box key={j}>
-                    <Text dimColor>│ </Text>
+                    <Text color={theme.border}>│ </Text>
                     <Text>{line}</Text>
                   </Box>
                 ))}
-                <Text dimColor>{bottomBorder}</Text>
+                <Text color={theme.border}>{bottomBorder}</Text>
               </Box>
             );
           }
@@ -293,9 +294,9 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
                 {block.lines.map((line, j) => (
                   <Box key={j}>
                     {block.ordered ? (
-                      <Text color="greenBright" dimColor>{`  ${j + 1}. `}</Text>
+                      <Text color={theme.primary} dimColor>{`  ${j + 1}. `}</Text>
                     ) : (
-                      <Text color="greenBright">  • </Text>
+                      <Text color={theme.primary}>  • </Text>
                     )}
                     {renderInline(parseInline(line))}
                   </Box>
@@ -309,7 +310,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
               <Box key={i} marginLeft={2} flexDirection="column">
                 {block.lines.map((line, j) => (
                   <Box key={j}>
-                    <Text color="greenBright">  ▋ </Text>
+                    <Text color={theme.primary}>  ▋ </Text>
                     <Text italic>{renderInline(parseInline(line))}</Text>
                   </Box>
                 ))}
@@ -352,31 +353,31 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
 
             return (
               <Box key={i} flexDirection="column" marginTop={1} marginLeft={2}>
-                <Text dimColor>{topBorder}</Text>
+                <Text color={theme.border}>{topBorder}</Text>
                 {/* Header row */}
                 <Box>
                   {headers.map((h, ci) => (
                     <React.Fragment key={ci}>
-                      <Text dimColor>│</Text>
-                      <Text bold color="greenBright">{padCell(h, colWidths[ci])}</Text>
+                      <Text color={theme.border}>│</Text>
+                       <Text bold color={theme.primary}>{padCell(h, colWidths[ci])}</Text>
                     </React.Fragment>
                   ))}
-                  <Text dimColor>│</Text>
+                  <Text color={theme.border}>│</Text>
                 </Box>
-                <Text dimColor>{midBorder}</Text>
+                <Text color={theme.border}>{midBorder}</Text>
                 {/* Data rows */}
                 {rows.map((row, ri) => (
                   <Box key={ri}>
                     {headers.map((_, ci) => (
                       <React.Fragment key={ci}>
-                        <Text dimColor>│</Text>
+                        <Text color={theme.border}>│</Text>
                         <Text>{padCell(row[ci] || "", colWidths[ci])}</Text>
                       </React.Fragment>
                     ))}
-                    <Text dimColor>│</Text>
+                    <Text color={theme.border}>│</Text>
                   </Box>
                 ))}
-                <Text dimColor>{bottomBorder}</Text>
+                <Text color={theme.border}>{bottomBorder}</Text>
               </Box>
             );
           }
