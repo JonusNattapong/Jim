@@ -9,7 +9,6 @@ import { ThinkingAnimation } from "./components/ThinkingAnimation.js";
 import { StatusBar, StatusInfo } from "./components/StatusBar.js";
 import { CommandOutput } from "./components/CommandOutput.js";
 import type { CommandOutputEntry } from "./components/CommandOutput.js";
-import { getRandomTag } from "./taglines.js";
 import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import { SearchablePicker } from "./components/SearchablePicker.js";
 import type { SearchablePickerItem } from "./components/SearchablePicker.js";
@@ -22,7 +21,11 @@ import type { AgentCallbacks } from "../agent/index.js";
 import type { PermissionMode } from "../permissions/manager.js";
 import { loadCliUiState, pushRecent, saveCliUiState, toggleFavorite } from "./ui-state.js";
 import { formatProviderDescription, formatConnectionListItem } from "../config/provider-presets.js";
-import { theme } from "./theme.js";
+import { theme, setTheme, THEME_LIST } from "./theme.js";
+
+// Initialize theme on first load
+const initialState = loadCliUiState(process.cwd());
+setTheme(initialState.themeId);
 
 // ─── Types ─────────────────────────────────────────────
 
@@ -30,9 +33,10 @@ const COMMANDS = [
   { cmd: "help", desc: "Show this help message" },
   { cmd: "model", desc: "Show or change AI model" },
   { cmd: "models", desc: "List available models" },
-  { cmd: "provider", desc: "Show current provider adapter (OpenAI, Anthropic, etc.)" },
-  { cmd: "providers", desc: "Pick a provider adapter (how to talk to the API)" },
-  { cmd: "connect", desc: "Connect a provider service (OpenRouter, Groq, etc.)" },
+  { cmd: "provider", desc: "Show current provider service or adapter" },
+  { cmd: "providers", desc: "Pick a provider service (OpenCode, OpenRouter, OpenRouter, etc.)" },
+  { cmd: "adapters", desc: "Pick a technical provider adapter (OpenAI, Anthropic, etc.)" },
+  { cmd: "connect", desc: "Connect a provider service by ID" },
   { cmd: "connections", desc: "List all available provider services" },
   { cmd: "mode", desc: "Change permission mode (plan/default...)" },
   { cmd: "auto-approve", desc: "Toggle auto-approve mode" },
@@ -48,12 +52,14 @@ const COMMANDS = [
   { cmd: "checkpoint", desc: "Create a checkpoint" },
   { cmd: "checkpoints", desc: "Browse checkpoints" },
   { cmd: "restore", desc: "Restore a checkpoint" },
+  { cmd: "themes", desc: "Pick a UI color theme" },
   { cmd: "plugins", desc: "Browse plugin groups" },
   { cmd: "history", desc: "Show message stats" },
   { cmd: "stats", desc: "Show usage statistics" },
   { cmd: "config", desc: "Show current config" },
   { cmd: "memory", desc: "Show memory layers" },
   { cmd: "approve", desc: "Approve the current proposed plan" },
+  { cmd: "yolo", desc: "Toggle YOLO mode: bypass all safety checks" },
   { cmd: "ollaman", desc: "Toggle Ollaman for background tasks" },
   { cmd: "quit", desc: "Exit Jim" },
 ];
@@ -121,10 +127,12 @@ const mapOpenAiToUiMessages = (messages: any[]): ChatMessage[] => {
       };
 
       if (msg.role === "assistant" && msg.tool_calls) {
-        uiMsg.toolCalls = msg.tool_calls.map((tc: any) => ({
-          id: tc.id,
-          name: tc.function.name,
-          args: JSON.parse(tc.function.arguments || "{}"),
+        uiMsg.toolCalls = (msg.tool_calls as any[]).map((tc: any): ToolCallEntry => ({
+          name: tc.function?.name ?? tc.name ?? "",
+          args: typeof (tc.function?.arguments ?? tc.arguments) === "string"
+            ? (tc.function?.arguments ?? tc.arguments ?? "{}")
+            : JSON.stringify(tc.function?.arguments ?? tc.arguments ?? {}),
+          status: "done",
         }));
       }
 
@@ -154,7 +162,6 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
   const [showStats, setShowStats] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [connectModal, setConnectModal] = useState<ConnectModalState | null>(null);
-  const [tagline] = useState(() => getRandomTag());
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [uiState, setUiState] = useState(() => loadCliUiState(agent.getProjectRoot()));
   const [thoughtProcess, setThoughtProcess] = useState("");
@@ -162,7 +169,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
   // Reset suggestion scroll when typing
   useEffect(() => {
     if (input.startsWith("/")) {
-      const filtered = COMMANDS.filter(c => ("/" + c.cmd).startsWith(input.toLowerCase())).slice(0, 5);
+      const filtered = COMMANDS.filter(c => ("/" + c.cmd).startsWith(input.toLowerCase())).slice(0, 20);
       if (suggestionIndex >= filtered.length) {
         setSuggestionIndex(0);
       }
@@ -216,6 +223,19 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
         setCmdOutput({ type: "success", content: "Plan APPROVED. Jim is now authorized to execute changes." });
         return;
 
+      case "yolo":
+        setAutoApprove(prev => {
+          const next = !prev;
+          if (next) {
+            agent.setPlanApproved(true);
+            setCmdOutput({ type: "success", content: "YOLO MODE ON. All safety checks bypassed. You only live once!" });
+          } else {
+            setCmdOutput({ type: "success", content: "YOLO MODE OFF. Safety checks restored." });
+          }
+          return next;
+        });
+        return;
+
       case "auto-approve":
         setAutoApprove(prev => {
           const next = !prev;
@@ -234,10 +254,9 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
             type: "choice",
             title: "Select permission mode",
             items: [
-              { label: "plan", value: "plan", description: "Propose a task list before executing any tool" },
-              { label: "default", value: "default", description: "Standard mode: ask for permission before modifying files" },
-              { label: "acceptEdits", value: "acceptEdits", description: "Auto-approve file changes, only ask for dangerous commands" },
-              { label: "dontAsk", value: "dontAsk", description: "Full autonomy: executing anything without confirmation" },
+              { label: "plan", value: "plan", description: "Read-only mode: explore code without making changes" },
+              { label: "edit", value: "edit", description: "Auto-approve file changes, ask for shell commands" },
+              { label: "ask", value: "ask", description: "Ask for permission before modifying files or running commands" },
             ],
             onSelect(value) {
               agent.setPermissionMode(value as PermissionMode);
@@ -331,52 +350,55 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
           setCmdOutput({ type: "success", content: `Provider mode: ${agent.getApiMode()} (effective: ${agent.getEffectiveProvider()})` });
         } else {
           const metadata = agent.getProviderMetadata();
+          const currentPreset = agent.getProviderPreset();
           setCmdOutput({
             type: "list",
-            content: `Provider mode: ${agent.getApiMode()} | effective adapter: ${agent.getEffectiveProvider()}`,
+            content: `Provider: ${currentPreset || "Custom"} | Adapter: ${agent.getApiMode()} (effective: ${agent.getEffectiveProvider()})`,
             items: [
               `Label: ${metadata.label}`,
               `Transport: ${metadata.transport}`,
               `Endpoint: ${metadata.endpoint}`,
               `Supports: ${metadata.supports.join(", ")}`,
-              `Recommended for current model: ${agent.getRecommendedProviderForModel()}`,
+              `Recommended for model: ${agent.getRecommendedProviderForModel()}`,
             ],
           });
         }
         return;
 
-      case "providers":
+      case "adapters":
         {
           const recommended = agent.getRecommendedProviderForModel();
           const providers = agent.getProviderRegistry();
-        setSelector({
-          type: "provider",
-          title: "Select provider adapter",
-          favoritesKey: "favoriteProviders",
-          recentsKey: "recentProviders",
-          items: [
-            { label: "Auto (recommended)", value: "auto", description: `Picks best adapter for ${agent.getModel()}: ${recommended}`, keywords: [recommended, agent.getModel()] },
-            ...providers.map((provider) => ({
-              label: provider.label,
-              value: provider.name,
-              description: `${provider.description} · ${provider.transport}`,
-              keywords: [provider.transport, ...provider.supports, provider.name],
-            })),
-          ],
-          onSelect(value) {
-            agent.setApiMode(value as any);
-            setApiMode(agent.getApiMode());
-            setCmdOutput({ type: "success", content: `Provider mode: ${agent.getApiMode()} (effective: ${agent.getEffectiveProvider()})` });
-          },
-        });
-        return;
+          setSelector({
+            type: "provider",
+            title: "Select provider adapter (Technical)",
+            favoritesKey: "favoriteProviders",
+            recentsKey: "recentProviders",
+            items: [
+              { label: "Auto (recommended)", value: "auto", description: `Picks best adapter for ${agent.getModel()}: ${recommended}`, keywords: [recommended, agent.getModel()] },
+              ...providers.map((provider) => ({
+                label: provider.label,
+                value: provider.name,
+                description: `${provider.description} · ${provider.transport}`,
+                keywords: [provider.transport, ...provider.supports, provider.name],
+              })),
+            ],
+            onSelect(value) {
+              agent.setApiMode(value as any);
+              setApiMode(agent.getApiMode());
+              setCmdOutput({ type: "success", content: `Adapter set to: ${agent.getApiMode()} (effective: ${agent.getEffectiveProvider()})` });
+            },
+          });
+          return;
         }
 
+      case "providers":
+      case "connections":
       case "connect":
         if (args) {
           const preset = agent.getResolvedProviderPreset(args);
           if (!preset) {
-            setCmdOutput({ type: "error", content: `Unknown provider preset: ${args}` });
+            setCmdOutput({ type: "error", content: `Unknown provider service: ${args}` });
             return;
           }
           if (!preset.adapter) {
@@ -384,27 +406,27 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
             setCmdOutput({ type: "list", content: result.message, items: result.details });
             return;
           }
-              setConnectModal({
-                presetId: args,
-                title: `Connect ${preset.label}`,
-                description: preset.description,
-                fields: preset.fields.map((field) => ({
-                  key: field.key,
-                  label: field.label,
-                  required: field.required,
-                  secret: field.secret,
-                  placeholder: field.placeholder,
-                  envVar: field.envVar,
-                })),
-                initialValues: preset.values,
-              });
+          setConnectModal({
+            presetId: args,
+            title: `Connect ${preset.label}`,
+            description: preset.description,
+            fields: preset.fields.map((field) => ({
+              key: field.key,
+              label: field.label,
+              required: field.required,
+              secret: field.secret,
+              placeholder: field.placeholder,
+              envVar: field.envVar,
+            })),
+            initialValues: preset.values,
+          });
           return;
         }
         {
           const presets = agent.getProviderPresets();
           setSelector({
             type: "connection",
-            title: "Connect provider preset",
+            title: "Select provider service",
             favoritesKey: "favoriteConnections",
             recentsKey: "recentConnections",
             items: presets.map((preset) => ({
@@ -416,7 +438,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
             onSelect(value) {
               const preset = agent.getResolvedProviderPreset(value);
               if (!preset) {
-                setCmdOutput({ type: "error", content: `Unknown provider preset: ${value}` });
+                setCmdOutput({ type: "error", content: `Unknown provider: ${value}` });
                 return;
               }
               if (!preset.adapter) {
@@ -650,10 +672,11 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
             "/stream           Toggle streaming",
             "/model [name]     Show/switch model",
             "/models           List models",
-            "/provider [name]  Show/switch auto|openai|openai-compatible",
-            "/providers        Pick a provider adapter (engine type)",
-            "/connect [name]   Connect to a service (Kilocode, OpenRouter, etc.)",
-            "/connections      List all available provider presets",
+            "/provider [name]  Show/switch current service",
+            "/providers        Pick a provider service (OpenCode, OpenRouter, etc.)",
+            "/adapters         Pick a technical provider adapter (OpenAI, etc.)",
+            "/connect [id]     Connect a service by ID",
+            "/connections      List all available provider services",
             "/workmode [name]  Show/switch architect|ask|code",
             "/modes            Pick a work mode",
             "/rules            Show rules",
@@ -663,6 +686,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
             "/checkpoint <lbl> Save a checkpoint",
             "/checkpoints      Browse checkpoints",
             "/restore <id>     Restore checkpoint",
+            "/themes           Pick a UI color theme",
             "/plugins          Browse plugin catalog",
             "/hooks            List hooks",
             "/memory           Show memory",
@@ -670,6 +694,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
             "/stats            Show usage statistics",
             "/history          Message stats",
             "/approve          APPROVE the current plan",
+            "/yolo             Toggle YOLO mode (bypass all safety)",
             "/ollaman [model]  Toggle background Ollaman",
             "/help             This help",
             "/quit             Exit",
@@ -679,6 +704,20 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       
       case "stats":
         setShowStats(true);
+        return;
+
+      case "themes":
+        setSelector({
+          type: "mode",
+          title: "Select UI Theme",
+          items: THEME_LIST.map(t => ({ label: t.label, value: t.id, description: t.id })),
+          onSelect(value) {
+            setTheme(value);
+            const next = { ...uiState, themeId: value };
+            persistUiState(next);
+            setCmdOutput({ type: "success", content: `Theme switched to: ${value}. Restart Jim if colors don't refresh immediately.` });
+          },
+        });
         return;
 
       case "plugins": {
@@ -895,7 +934,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
         const argPrefix = parts[1].toLowerCase();
         
         if (cmd === "/mode") {
-          const modes = ["plan", "default", "acceptEdits", "dontAsk"];
+          const modes = ["plan", "edit", "ask"];
           suggestions = modes.filter(m => m.startsWith(argPrefix)).map(m => ({ label: m, value: "/mode " + m }));
         } else if (cmd === "/workmode") {
           const wmodes = ["architect", "ask", "code"];
@@ -940,11 +979,8 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
         tokens={liveTokens} 
         projectRoot={agent.getProjectRoot()}
         username={process.env.USER || process.env.USERNAME || "Engineer"}
+        yolo={autoApprove}
       />
-
-      <Box marginLeft={2} marginBottom={1}>
-        <Text italic dimColor>“ {tagline} ”</Text>
-      </Box>
 
       {/* Messages */}
       {messages.map((msg, i) => (
@@ -965,6 +1001,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
           content={thoughtProcess}
           isStreaming={streaming && activeTools.length === 0}
           elapsed={startTime ? Math.floor((Date.now() - startTime) / 1000) : 0}
+          tokens={liveTokens}
         />
       )}
 
@@ -996,7 +1033,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
           config={[
             { key: "model", label: "Model", value: model, type: "enum", options: agent.getAvailableModels() },
             { key: "streaming", label: "Streaming", value: streaming, type: "boolean" },
-            { key: "mode", label: "Permission mode", value: mode, type: "enum", options: ["plan", "default", "acceptEdits", "dontAsk"] },
+            { key: "mode", label: "Permission mode", value: mode, type: "enum", options: ["plan", "edit", "ask"] },
             { key: "workMode", label: "Work mode", value: workMode, type: "enum", options: ["architect", "ask", "code"] },
             { key: "api", label: "Provider mode", value: apiMode, type: "enum", options: ["auto", "openai", "openai-compatible"] },
             { key: "baseUrl", label: "Base URL", value: agent.getBaseUrl(), type: "string" },
@@ -1064,7 +1101,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
             } else if (parts.length === 2) {
               const cmd = parts[0].toLowerCase();
               const arg = parts[1].toLowerCase();
-              if (cmd === "/mode") suggestions = ["plan", "default", "acceptEdits", "dontAsk"].filter(m => m.startsWith(arg)).map(m => ({ label: m }));
+              if (cmd === "/mode") suggestions = ["plan", "edit", "ask"].filter(m => m.startsWith(arg)).map(m => ({ label: m }));
               if (cmd === "/workmode") suggestions = ["architect", "ask", "code"].filter(m => m.startsWith(arg)).map(m => ({ label: m }));
               if (cmd === "/api" || cmd === "/provider") suggestions = ["auto", "openai", "openai-compatible"].filter(m => m.startsWith(arg)).map(m => ({ label: m }));
             }

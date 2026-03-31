@@ -169,6 +169,49 @@ describe("ChatCompletionsProvider", () => {
     expect(capturedParams.temperature).toBe(0.7);
     expect(capturedParams.max_tokens).toBe(100);
   });
+
+  it("ignores malformed tools and tool calls", async () => {
+    let capturedParams: Record<string, unknown> = {};
+    const mock = {
+      chat: {
+        completions: {
+          create: async (params: Record<string, unknown>) => {
+            capturedParams = params;
+            return {
+              choices: [{
+                message: {
+                  content: null,
+                  tool_calls: [
+                    undefined,
+                    { id: "tc1", function: { name: "read_file", arguments: "{\"path\":\"test.ts\"}" } },
+                  ],
+                },
+                finish_reason: "stop",
+              }],
+            };
+          },
+        },
+      },
+    } as unknown as import("openai").default;
+
+    const provider = new ChatCompletionsProvider(mock);
+    const result = await provider.complete(
+      [{
+        role: "assistant",
+        content: "",
+        tool_calls: [undefined as any, { id: "prev", function: { name: "grep", arguments: "{\"pattern\":\"x\"}" } } as any],
+      }],
+      [
+        undefined as any,
+        { type: "function", function: { name: "read_file", description: "read", parameters: {} } },
+      ] as any,
+      { model: "test-model" },
+    );
+
+    expect((capturedParams.tools as Array<Record<string, unknown>>)).toHaveLength(1);
+    expect(result.toolCalls).toHaveLength(1);
+    expect(result.toolCalls[0].name).toBe("read_file");
+  });
 });
 
 describe("ResponsesProvider", () => {

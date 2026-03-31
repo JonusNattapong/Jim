@@ -6,7 +6,7 @@ import { Agent } from "../agent/index.js";
 import type { AgentConfig } from "../agent/index.js";
 import type { PermissionMode } from "../permissions/manager.js";
 import { App } from "./app.js";
-import { getRandomTag } from "./taglines.js";
+import { getRandomTagline } from "./taglines.js";
 import { loadProviderSettings, loadSavedProviderSelection } from "../config/provider-store.js";
 import { resolveProviderPreset } from "../config/provider-presets.js";
 import { shutdownLogger } from "../utils/logger.js";
@@ -49,7 +49,7 @@ function loadConfig(): AgentConfig {
     maxTurns: parseInt(process.env.MAX_TURNS ?? "25", 10),
     maxToolOutput: parseInt(process.env.MAX_TOOL_OUTPUT ?? "5000", 10),
     projectRoot,
-    permissionMode: (process.env.PERMISSION_MODE as PermissionMode) ?? "default",
+    permissionMode: (process.env.PERMISSION_MODE as PermissionMode) ?? "ask",
     streaming: false,
     api: apiMode === "responses" || apiMode === "chat-completions" || apiMode === "openai" || apiMode === "openai-compatible" || apiMode === "auto"
       ? apiMode
@@ -70,7 +70,8 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const agent = new Agent(config);
   const logo = `                                                                                                        
-👾 JIM - JimCode                
+👾 JimCode   
+
 .    ░░░░░░░░   ░▒▒▓▓▓▓▓▒▒▒░
               .  ░░░░░░      ░░░▒▓▓▓▓▓▓▓▒▒░░          
 ░░▒▒▒░░     *      ░░░░░░░░░░░░    .             
@@ -140,7 +141,7 @@ async function main(): Promise<void> {
     <App
       agent={agent}
       initialModel={config.model}
-      initialMode={config.permissionMode ?? "default"}
+      initialMode={config.permissionMode ?? "ask"}
       initialStreaming={false}
     />
   );
@@ -150,7 +151,7 @@ async function main(): Promise<void> {
 
   // ASCII Banner on exit
   console.log(gradient.atlas.multiline(logo));
-  console.log(`  \x1b[3m\x1b[90m${getRandomTag()}\x1b[0m\n`);
+  console.log(`  \x1b[3m\x1b[90m${getRandomTagline()}\x1b[0m\n`);
 
   // Session Info
   const finalSessionId = agent.getSessionId() || sessionId;

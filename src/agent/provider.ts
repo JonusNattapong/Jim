@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
-export type ProviderName = "openai" | "openai-compatible" | "anthropic" | "azure-openai" | "vertex-ai" | "bedrock";
+export type ProviderName = "openai" | "openai-compatible" | "anthropic" | "azure-openai" | "vertex-ai" | "bedrock" | "responses";
 export type ProviderMode = "auto" | ProviderName | "responses" | "chat-completions";
 export type ProviderCapability = "streaming" | "tools" | "reasoning" | "vision" | "mcp";
 
@@ -87,12 +87,20 @@ const PROVIDER_REGISTRY: Record<ProviderName, ProviderMetadata> = {
   openai: {
     name: "openai",
     label: "OpenAI",
-    description: "OpenAI Responses API adapter for newer tool-rich models and typed response items.",
+    description: "Standard OpenAI Chat Completions API adapter.",
+    transport: "chat-completions",
+    endpoint: "/chat/completions",
+    supports: ["streaming", "tools", "reasoning", "vision", "mcp"],
+    recommendedModelPatterns: ["gpt-4o", "gpt-4", "o1", "o3"],
+  },
+  responses: {
+    name: "responses",
+    label: "OpenAI Responses",
+    description: "Experimental OpenAI Responses API adapter for advanced structured tools.",
     transport: "responses",
     endpoint: "/responses",
     supports: ["streaming", "tools", "reasoning", "vision", "mcp"],
-    recommendedModelPatterns: ["gpt-5", "codex", "o3", "o4"],
-    notes: "Best fit for GPT-5-era OpenAI models and advanced Responses features.",
+    recommendedModelPatterns: ["gpt-4o", "gpt-4"],
   },
   "openai-compatible": {
     name: "openai-compatible",
@@ -101,8 +109,8 @@ const PROVIDER_REGISTRY: Record<ProviderName, ProviderMetadata> = {
     transport: "chat-completions",
     endpoint: "/chat/completions",
     supports: ["streaming", "tools", "vision"],
-    recommendedModelPatterns: ["grok", "mistral", "minimax", "kilo-auto", "kilocode"],
-    notes: "Best fit for OpenAI-compatible gateways and providers that still expose chat.completions.",
+    recommendedModelPatterns: ["grok", "mistral", "llama3", "deepseek", "qwen"],
+    notes: "Best fit for OpenAI-compatible gateways and self-hosted models.",
   },
   anthropic: {
     name: "anthropic",
@@ -111,7 +119,7 @@ const PROVIDER_REGISTRY: Record<ProviderName, ProviderMetadata> = {
     transport: "chat-completions",
     endpoint: "/v1/messages",
     supports: ["streaming", "tools", "vision"],
-    recommendedModelPatterns: ["claude"],
+    recommendedModelPatterns: ["claude-3-5", "claude-3", "claude-haiku"],
     notes: "Native Anthropic Messages API. Set ANTHROPIC_API_KEY to authenticate.",
   },
   "azure-openai": {
@@ -122,7 +130,7 @@ const PROVIDER_REGISTRY: Record<ProviderName, ProviderMetadata> = {
     endpoint: "/openai/deployments/{deployment}/chat/completions",
     supports: ["streaming", "tools", "vision"],
     recommendedModelPatterns: ["gpt-4", "gpt-35"],
-    notes: "Requires AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY. Set AZURE_OPENAI_DEPLOYMENT for the deployment name.",
+    notes: "Requires AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY.",
   },
   "vertex-ai": {
     name: "vertex-ai",
@@ -131,8 +139,8 @@ const PROVIDER_REGISTRY: Record<ProviderName, ProviderMetadata> = {
     transport: "chat-completions",
     endpoint: "/v1/projects/{project}/locations/{location}/publishers/google/models/{model}",
     supports: ["streaming", "tools", "vision"],
-    recommendedModelPatterns: ["gemini"],
-    notes: "Requires GOOGLE_CLOUD_PROJECT, GOOGLE_CLOUD_LOCATION, and GOOGLE_API_KEY or GOOGLE_ACCESS_TOKEN.",
+    recommendedModelPatterns: ["gemini-1.5", "gemini-1.0"],
+    notes: "Requires GOOGLE_CLOUD_PROJECT and GOOGLE_API_KEY/ACCESS_TOKEN.",
   },
   bedrock: {
     name: "bedrock",
@@ -141,8 +149,8 @@ const PROVIDER_REGISTRY: Record<ProviderName, ProviderMetadata> = {
     transport: "chat-completions",
     endpoint: "/model/{model}/invoke",
     supports: ["streaming", "tools"],
-    recommendedModelPatterns: ["claude", "titan", "llama"],
-    notes: "Requires AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_REGION. Optionally AWS_SESSION_TOKEN.",
+    recommendedModelPatterns: ["claude-3", "llama-3", "titan"],
+    notes: "Requires AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_REGION.",
   },
 };
 
@@ -157,15 +165,25 @@ export function getProviderMetadata(name: ProviderName): ProviderMetadata {
 export function inferProviderFromModel(model: string): ProviderName {
   const normalized = model.toLowerCase();
 
-  // Support provider/model prefix style
+  // Support provider/model prefix style (e.g. "minimax/model" or "minimax-model")
+  let prefix: string | undefined;
   if (normalized.includes("/")) {
-    const [prefix] = normalized.split("/");
+    [prefix] = normalized.split("/");
+  } else if (normalized.startsWith("minimax-") || normalized.startsWith("minimax:")) {
+    prefix = "minimax";
+  } else if (normalized.startsWith("opencode-") || normalized.startsWith("opencode:")) {
+    prefix = "opencode";
+  } else if (normalized.startsWith("ollama-") || normalized.startsWith("ollama:")) {
+    prefix = "ollama";
+  }
+
+  if (prefix) {
     if (prefix === "anthropic") return "anthropic";
     if (prefix === "openai") return "openai";
     if (prefix === "google" || prefix === "vertex" || prefix === "gemini" || prefix === "google-vertex") return "vertex-ai";
     if (prefix === "azure") return "azure-openai";
     if (prefix === "aws" || prefix === "bedrock" || prefix === "amazon") return "bedrock";
-    if (prefix === "minimax" || prefix === "kilocode" || prefix === "local" || prefix === "ollama" || prefix === "compatible") return "openai-compatible";
+    if (prefix === "minimax" || prefix === "kilocode" || prefix === "local" || prefix === "ollama" || prefix === "compatible" || prefix === "opencode" || prefix === "mimo" || prefix === "kilo") return "openai-compatible";
   }
 
   const providerPriority: ProviderName[] = ["openai", "anthropic", "vertex-ai", "bedrock", "azure-openai", "openai-compatible"];
@@ -181,9 +199,8 @@ export function inferProviderFromModel(model: string): ProviderName {
 
 export function normalizeProviderMode(mode?: ProviderMode): ProviderName | undefined {
   if (!mode || mode === "auto") return undefined;
-  if (mode === "responses") return "openai";
   if (mode === "chat-completions") return "openai-compatible";
-  const validNames: ProviderName[] = ["openai", "openai-compatible", "anthropic", "azure-openai", "vertex-ai", "bedrock"];
+  const validNames: ProviderName[] = ["openai", "openai-compatible", "anthropic", "azure-openai", "vertex-ai", "bedrock", "responses"];
   if (validNames.includes(mode as ProviderName)) return mode as ProviderName;
   return undefined;
 }
@@ -203,11 +220,12 @@ function toCommonMessages(messages: ChatCompletionMessageParam[]): ProviderCommo
     }
 
     if (msg.role === "assistant") {
-      const toolCalls = Array.isArray((msg as { tool_calls?: unknown }).tool_calls)
-        ? ((msg as { tool_calls: Array<{ id: string; function: { name: string; arguments: string } }> }).tool_calls).map((tc) => ({
-            id: tc.id,
-            name: tc.function.name,
-            arguments: tc.function.arguments,
+      const msgAny = msg as any;
+      const toolCalls = Array.isArray(msgAny.tool_calls)
+        ? (msgAny.tool_calls as any[]).filter(Boolean).map((tc) => ({
+            id: tc?.id ?? "",
+            name: tc?.function?.name ?? tc?.name ?? "",
+            arguments: tc?.function?.arguments ?? tc?.arguments ?? "",
           }))
         : undefined;
 
@@ -232,8 +250,47 @@ function toCommonMessages(messages: ChatCompletionMessageParam[]): ProviderCommo
   return result;
 }
 
+function isProviderToolDef(tool: ProviderToolDef | null | undefined): tool is ProviderToolDef {
+  return !!tool && typeof tool.function?.name === "string";
+}
+
+function sanitizeProviderTools(tools: ProviderToolDef[]): ProviderToolDef[] {
+  return tools.filter(isProviderToolDef).map((tool) => ({
+    type: "function",
+    function: {
+      name: tool.function.name,
+      description: tool.function.description ?? "",
+      parameters: ensureObjectSchema(tool.function.parameters),
+    },
+  }));
+}
+
+function sanitizeToolCalls(rawToolCalls: unknown): ProviderToolCall[] {
+  if (!Array.isArray(rawToolCalls)) return [];
+
+  return rawToolCalls
+    .filter((tc): tc is Record<string, unknown> => !!tc && typeof tc === "object")
+    .map((tc) => {
+      const fn = tc.function;
+      const functionData = fn && typeof fn === "object" ? fn as Record<string, unknown> : undefined;
+      return {
+        id: typeof tc.id === "string" ? tc.id : "",
+        name: typeof functionData?.name === "string"
+          ? functionData.name
+          : typeof tc.name === "string"
+            ? tc.name
+            : "",
+        arguments: typeof functionData?.arguments === "string"
+          ? functionData.arguments
+          : typeof tc.arguments === "string"
+            ? tc.arguments
+            : "",
+      };
+    });
+}
+
 function toCommonTools(tools: ProviderToolDef[]): ProviderCommonTool[] {
-  return tools.map((tool) => ({
+  return sanitizeProviderTools(tools).map((tool) => ({
     name: tool.function.name,
     description: tool.function.description,
     parameters: tool.function.parameters,
@@ -262,11 +319,7 @@ function finalizeChatResponse(choice: {
   finish_reason?: string | null;
 }): ProviderResponse {
   const message = choice.message;
-  const toolCalls: ProviderToolCall[] = (message?.tool_calls ?? []).map((tc) => ({
-    id: tc.id,
-    name: tc.function.name,
-    arguments: tc.function.arguments,
-  }));
+  const toolCalls = sanitizeToolCalls(message?.tool_calls);
 
   return {
     content: message?.content ?? "",
@@ -300,12 +353,12 @@ export class ChatCompletionsProvider implements LLMProvider {
           return {
             role: "assistant" as const,
             content: message.content ?? null,
-            tool_calls: message.tool_calls?.map((toolCall) => ({
-              id: toolCall.id,
+            tool_calls: message.tool_calls?.map((tc) => ({
+              id: tc.id,
               type: "function" as const,
               function: {
-                name: toolCall.name,
-                arguments: toolCall.arguments,
+                name: tc.name,
+                arguments: tc.arguments,
               },
             })),
           };
@@ -355,12 +408,12 @@ export class ChatCompletionsProvider implements LLMProvider {
           return {
             role: "assistant" as const,
             content: message.content ?? null,
-            tool_calls: message.tool_calls?.map((toolCall) => ({
-              id: toolCall.id,
+            tool_calls: message.tool_calls?.map((tc) => ({
+              id: tc.id,
               type: "function" as const,
               function: {
-                name: toolCall.name,
-                arguments: toolCall.arguments,
+                name: tc.name,
+                arguments: tc.arguments,
               },
             })),
           };
@@ -559,14 +612,14 @@ export class ResponsesProvider implements LLMProvider {
           if (message.content) {
             entries.push({ role: "assistant", content: message.content });
           }
-          for (const toolCall of message.tool_calls ?? []) {
+          for (const tc of message.tool_calls ?? []) {
             entries.push({
               role: "assistant",
               content: [{
                 type: "function_call",
-                name: toolCall.name,
-                arguments: toolCall.arguments,
-                call_id: toolCall.id,
+                name: tc.name,
+                arguments: tc.arguments,
+                call_id: tc.id,
               }],
             });
           }
@@ -863,14 +916,7 @@ export class AzureOpenAIProvider implements LLMProvider {
   }
 
   private transformTools(tools: ProviderToolDef[]): ProviderToolDef[] {
-    return tools.map((tool) => ({
-      type: "function" as const,
-      function: {
-        name: tool.function.name,
-        description: tool.function.description,
-        parameters: ensureObjectSchema(tool.function.parameters),
-      },
-    }));
+    return sanitizeProviderTools(tools);
   }
 }
 
@@ -956,6 +1002,9 @@ export class AnthropicProvider implements LLMProvider {
       "Content-Type": "application/json",
       "x-api-key": this.apiKey,
       "anthropic-version": "2023-06-01",
+      "anthropic-beta": "interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14",
+      "X-Title": "JimCode",
+      "HTTP-Referer": "https://jimcode.ai",
     };
   }
 
@@ -969,10 +1018,10 @@ export class AnthropicProvider implements LLMProvider {
     if (system) body.system = system;
     if (options.temperature != null) body.temperature = options.temperature;
     if (tools.length > 0) {
-      body.tools = tools.map((tool) => ({
+      body.tools = sanitizeProviderTools(tools).map((tool) => ({
         name: tool.function.name,
         description: tool.function.description,
-        input_schema: ensureObjectSchema(tool.function.parameters),
+        input_schema: tool.function.parameters,
       }));
     }
     return body;
@@ -1001,15 +1050,19 @@ export class AnthropicProvider implements LLMProvider {
         if (msg.content) {
           content.push({ type: "text", text: typeof msg.content === "string" ? msg.content : "" });
         }
-        const toolCalls = Array.isArray((msg as { tool_calls?: unknown }).tool_calls)
-          ? (msg as { tool_calls: Array<{ id: string; function: { name: string; arguments: string } }> }).tool_calls
-          : [];
+        const msgAny = msg as any;
+        const toolCalls = sanitizeToolCalls(msgAny.tool_calls).map((tc) => ({
+          id: tc.id,
+          name: tc.name,
+          input: tc.arguments ? safeParseJSON(tc.arguments) : {},
+        }));
+        
         for (const tc of toolCalls) {
           content.push({
             type: "tool_use",
             id: tc.id,
-            name: tc.function.name,
-            input: safeParseJSON(tc.function.arguments),
+            name: tc.name,
+            input: tc.input,
           });
         }
         anthropicMessages.push({ role: "assistant", content });
@@ -1228,11 +1281,14 @@ export class VertexAIProvider implements LLMProvider {
       if (msg.role === "assistant") {
         const parts: Array<Record<string, unknown>> = [];
         if (msg.content) parts.push({ text: typeof msg.content === "string" ? msg.content : "" });
-        const toolCalls = Array.isArray((msg as { tool_calls?: unknown }).tool_calls)
-          ? (msg as { tool_calls: Array<{ id: string; function: { name: string; arguments: string } }> }).tool_calls
-          : [];
+        const msgAny = msg as any;
+        const toolCalls = sanitizeToolCalls(msgAny.tool_calls).map((tc) => ({
+          name: tc.name,
+          args: tc.arguments ? safeParseJSON(tc.arguments) : {},
+        }));
+
         for (const tc of toolCalls) {
-          parts.push({ functionCall: { name: tc.function.name, args: safeParseJSON(tc.function.arguments) } });
+          parts.push({ functionCall: { name: tc.name, args: tc.args } });
         }
         contents.push({ role: "model", parts });
         continue;
@@ -1256,10 +1312,10 @@ export class VertexAIProvider implements LLMProvider {
     }
     if (tools.length > 0) {
       body.tools = [{
-        functionDeclarations: tools.map((tool) => ({
+        functionDeclarations: sanitizeProviderTools(tools).map((tool) => ({
           name: tool.function.name,
           description: tool.function.description,
-          parameters: ensureObjectSchema(tool.function.parameters),
+          parameters: tool.function.parameters,
         })),
       }];
     }
@@ -1461,11 +1517,16 @@ export class BedrockProvider implements LLMProvider {
       if (msg.role === "assistant") {
         const content: Array<Record<string, unknown>> = [];
         if (msg.content) content.push({ type: "text", text: typeof msg.content === "string" ? msg.content : "" });
-        const toolCalls = Array.isArray((msg as { tool_calls?: unknown }).tool_calls)
-          ? (msg as { tool_calls: Array<{ id: string; function: { name: string; arguments: string } }> }).tool_calls
-          : [];
+        
+        const msgAny = msg as any;
+        const toolCalls = sanitizeToolCalls(msgAny.tool_calls).map((tc) => ({
+          id: tc.id,
+          name: tc.name,
+          input: tc.arguments ? safeParseJSON(tc.arguments) : {},
+        }));
+
         for (const tc of toolCalls) {
-          content.push({ type: "tool_use", id: tc.id, name: tc.function.name, input: safeParseJSON(tc.function.arguments) });
+          content.push({ type: "tool_use", id: tc.id, name: tc.name, input: tc.input });
         }
         bedrockMessages.push({ role: "assistant", content });
         continue;
@@ -1487,10 +1548,10 @@ export class BedrockProvider implements LLMProvider {
     if (system) body.system = system;
     if (options.temperature != null) body.temperature = options.temperature;
     if (tools.length > 0) {
-      body.tools = tools.map((tool) => ({
+      body.tools = sanitizeProviderTools(tools).map((tool) => ({
         name: tool.function.name,
         description: tool.function.description,
-        input_schema: ensureObjectSchema(tool.function.parameters),
+        input_schema: tool.function.parameters,
       }));
     }
     return body;
@@ -1657,6 +1718,8 @@ export function createProvider(
   const provider = normalizeProviderMode(options?.provider);
   switch (provider) {
     case "openai":
+      return new ChatCompletionsProvider(client);
+    case "responses":
       return new ResponsesProvider(client);
     case "anthropic":
       return new AnthropicProvider(client);

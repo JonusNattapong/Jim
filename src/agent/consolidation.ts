@@ -30,11 +30,7 @@ export class ConsolidationEngine {
       this.extractSkills(sessionHistory),
     ]);
 
-    await Promise.all([
-      this.personaManager.save(),
-      this.skillStore.saveSkill(this.skillStore.getSkills()[0]), // Not quite right, but as a placeholder for saving. 
-      // Actually save is handled inside SkillStore for each skill.
-    ]);
+    await this.personaManager.save();
   }
 
   private async reflectOnUser(history: string): Promise<void> {
@@ -103,8 +99,10 @@ export class ConsolidationEngine {
 
       const jsonMatch = result.content.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
-        const skills = JSON.parse(jsonMatch[0]) as Skill[];
+        const parsed = JSON.parse(jsonMatch[0]) as unknown;
+        const skills = Array.isArray(parsed) ? parsed : [];
         for (const skill of skills) {
+          if (!this.isValidSkill(skill)) continue;
           const existing = this.skillStore.findSkill(skill.name);
           if (!existing) {
              const newSkill: Skill = {
@@ -122,5 +120,14 @@ export class ConsolidationEngine {
     } catch (err: unknown) {
       this.log.warn({ err }, "Failed to extract skills from session");
     }
+  }
+
+  private isValidSkill(skill: unknown): skill is Omit<Skill, "successCount" | "lastUsed"> & Partial<Pick<Skill, "successCount" | "lastUsed">> {
+    if (!skill || typeof skill !== "object") return false;
+    const candidate = skill as Record<string, unknown>;
+    return typeof candidate.name === "string"
+      && typeof candidate.description === "string"
+      && Array.isArray(candidate.steps)
+      && typeof candidate.category === "string";
   }
 }

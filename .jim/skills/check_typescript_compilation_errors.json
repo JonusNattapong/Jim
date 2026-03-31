@@ -1,0 +1,12 @@
+{
+  "name": "Check TypeScript Compilation Errors",
+  "description": "Run TypeScript compiler to check for errors in a project, verify dependencies, and report compilation status",
+  "steps": [
+    "Check project structure and dependencies from package.json",
+    "Run TypeScript compiler (tsc) to check for compilation errors",
+    "Analyze and report compilation results"
+  ],
+  "category": "dev",
+  "successCount": 1,
+  "lastUsed": "2026-03-30T09:50:49.001Z"
+}

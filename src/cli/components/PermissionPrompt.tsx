@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Text, useInput } from "ink";
 import { theme } from "../theme.js";
+import { toolLabel, toolIcon, toolVerb } from "../tool-labels.js";
 import { DiffPreview } from "./DiffPreview.js";
 
 interface DiffPreviewData {
@@ -15,26 +16,6 @@ interface PermissionPromptProps {
   args: string;
   diffPreview?: DiffPreviewData;
   onResolve: (approved: boolean) => void;
-}
-
-function toolIcon(toolName: string): string {
-  switch (toolName) {
-    case "edit_file": return "~";
-    case "write_file": return "+";
-    case "run_command": return ">";
-    case "git_command": return "#";
-    default: return "?";
-  }
-}
-
-function toolVerb(toolName: string): string {
-  switch (toolName) {
-    case "edit_file": return "edit";
-    case "write_file": return "write";
-    case "run_command": return "run";
-    case "git_command": return "execute git";
-    default: return "execute";
-  }
 }
 
 export const PermissionPrompt: React.FC<PermissionPromptProps> = ({ toolName, args, diffPreview, onResolve }) => {
@@ -53,13 +34,13 @@ export const PermissionPrompt: React.FC<PermissionPromptProps> = ({ toolName, ar
       {/* Header */}
       <Box>
         <Text color={theme.warning} bold>{toolIcon(toolName)} </Text>
-        <Text color={theme.warning} bold>Allow {toolVerb(toolName)}?</Text>
+        <Text color={theme.warning} bold>Allow {toolLabel(toolName)}?</Text>
       </Box>
 
       {/* Tool info */}
       <Box marginLeft={1}>
         <Text dimColor>tool </Text>
-        <Text color={theme.success} bold>{toolName}</Text>
+        <Text color={theme.success} bold>{toolLabel(toolName)}</Text>
         {!isFileTool && (
           <>
             <Text dimColor>  args </Text>

@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
 import { theme } from "../theme.js";
+import { RetroShader } from "./RetroShader.js";
+import { getRandomTip } from "../tips.js";
+import { GradientText } from "./GradientText.js";
 
 interface HeaderProps {
   model: string;
@@ -10,11 +13,16 @@ interface HeaderProps {
   tokens: number;
   projectRoot: string;
   username?: string;
+  yolo?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming, tokens, projectRoot, username }) => {
+export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming, tokens, projectRoot, username, yolo }) => {
   const shortModel = model.includes("/") ? model.split("/").pop()! : model;
   const user = username || "Engineer";
+  const [tip] = useState(getRandomTip());
+
+  // Logo gradient colors
+  const logoColors = [theme.primary, theme.primaryBright, theme.textBright];
 
   // Rough blended average cost estimation: $3 per 1M tokens
   const estCost = ((tokens / 1_000_000) * 3.00).toFixed(4);
@@ -25,10 +33,9 @@ export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming
       {/* Top Banner with Title */}
       <Box justifyContent="space-between" paddingX={1}>
         <Box>
-          <Text color={theme.primary} bold>JimCode </Text>
-          <Text color={theme.textBright}>{process.env.JIM_VERSION || "v0.4.0"}</Text>
+          <Text color={theme.primary} bold>JIMCODE </Text>
         </Box>
-        <Text color={theme.textMuted} dimColor>RockStar Coder</Text>
+        <Text color={theme.textMuted} dimColor>{process.env.JIM_VERSION || "v0.4.0"}</Text>
       </Box>
 
       {/* Main Dashboard Box */}
@@ -83,6 +90,11 @@ export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming
                 <Text color={theme.primary} bold>ACTIVE</Text>
               </Box>
               <Box>
+                {yolo && (
+                  <Box marginRight={2}>
+                    <Text color={theme.error} bold>[ YOLO ]</Text>
+                  </Box>
+                )}
                 <Box width={12}>
                   <Text color={theme.textMuted} dimColor>SCAN MODE: </Text>
                 </Box>
@@ -95,20 +107,16 @@ export const Header: React.FC<HeaderProps> = ({ model, mode, workMode, streaming
                 <Text color={theme.textMuted} dimColor>● ENVIRONMENT: </Text>
                 <Text color={theme.primary} bold>{workMode.toUpperCase()}</Text>
               </Box>
-              <Box>
-                <Box width={12}>
-                  <Text color={theme.textMuted} dimColor>VERSION: </Text>
-                </Box>
-                <Text color={theme.textBright}>0.4.0</Text>
-              </Box>
             </Box>
 
+            {/* Tip Box */}
             <Box marginTop={1} borderStyle="single" borderColor={theme.secondary} paddingX={1} width="100%">
               <Text color={theme.textBright} italic>
                 <Text color={theme.primary} bold>Tip: </Text>
-                Ask Jim to explore or refactor for better results
+                {tip}
               </Text>
             </Box>
+
           </Box>
         </Box>
       </Box>

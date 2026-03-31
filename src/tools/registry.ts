@@ -93,6 +93,12 @@ export class ToolRegistry {
     this.register(office_definition, office_handler);
     this.register(office_doctor_definition, office_doctor_handler);
 
+    // Memory management
+    this.register(memory_archive_definition, memory_archive_handler);
+    this.register(memory_recall_definition, memory_recall_handler);
+    this.register(memory_list_definition, memory_list_handler);
+    this.register(memory_forget_definition, memory_forget_handler);
+
     // Agents
     this.register(spawn_agent_definition, spawn_agent_handler);
   }

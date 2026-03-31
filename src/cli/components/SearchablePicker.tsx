@@ -137,36 +137,71 @@ export const SearchablePicker: React.FC<SearchablePickerProps> = ({
         <Text dimColor>No matches</Text>
       )}
       {(() => {
-        let visibleIndex = -1;
-        return visibleEntries.slice(0, 18).map((entry) => {
-          if (entry.type === "heading") {
-            return (
-              <Box key={entry.id} marginTop={1}>
-                <Text bold color={theme.warning}>{entry.label}</Text>
-              </Box>
-            );
-          }
-
-          visibleIndex += 1;
-          const item = entry.item;
-          const active = visibleIndex === index;
-          const favorite = favorites.includes(item.value);
-          const recent = recents.includes(item.value);
-          return (
-            <Box key={item.value} flexDirection="column" marginBottom={1}>
-              <Text color={active ? theme.inverse : theme.text} backgroundColor={active ? theme.warning : undefined}>
-                {active ? "❯ " : "  "}
-                {favorite ? "★ " : recent ? "• " : "  "}
-                {item.label}
-              </Text>
-              {item.description && (
-                <Box marginLeft={4}>
-                  <Text dimColor>{item.description}</Text>
-                </Box>
-              )}
-            </Box>
-          );
+        // Calculate windowed view
+        const windowSize = 10;
+        let itemCounter = -1;
+        const mapped = visibleEntries.map((e, idx) => {
+          if (e.type === "item") itemCounter++;
+          const isSelected = e.type === "item" && itemCounter === index;
+          return { ...e, isSelected, globalIndex: idx };
         });
+
+        const selectedIdx = mapped.findIndex(m => m.isSelected);
+        const pivot = selectedIdx === -1 ? 0 : selectedIdx;
+        let start = Math.max(0, pivot - Math.floor(windowSize / 2));
+        let end = Math.min(mapped.length, start + windowSize);
+
+        if (end - start < windowSize) {
+          start = Math.max(0, end - windowSize);
+        }
+
+        const windowed = mapped.slice(start, end);
+
+        return (
+          <Box flexDirection="column">
+            {start > 0 && (
+              <Box justifyContent="center">
+                <Text dimColor>↑ more above ({start})</Text>
+              </Box>
+            )}
+            {windowed.map((entry) => {
+              if (entry.type === "heading") {
+                return (
+                  <Box key={entry.id} marginTop={1} marginBottom={0}>
+                    <Text bold color={theme.warning}>{entry.label}</Text>
+                  </Box>
+                );
+              }
+
+              const item = entry.item;
+              const active = entry.isSelected;
+              const favorite = favorites.includes(item.value);
+              const recent = recents.includes(item.value);
+
+              return (
+                <Box key={item.value} flexDirection="column" marginTop={0} marginBottom={1}>
+                  <Box>
+                    <Text bold={active} color={active ? theme.inverse : theme.text} backgroundColor={active ? theme.warning : undefined}>
+                      {active ? " ❯ " : "   "}
+                      {favorite ? "★ " : recent ? "• " : "  "}
+                      {item.label}
+                    </Text>
+                  </Box>
+                  {item.description && (
+                    <Box marginLeft={5}>
+                      <Text dimColor italic={!active}>{item.description}</Text>
+                    </Box>
+                  )}
+                </Box>
+              );
+            })}
+            {end < mapped.length && (
+              <Box justifyContent="center">
+                <Text dimColor>↓ more below ({mapped.length - end})</Text>
+              </Box>
+            )}
+          </Box>
+        );
       })()}
     </Box>
   );

@@ -1,28 +1,31 @@
 /**
- * Deep Ocean-themed taglines for the Jim AI Coding Agent.
- * Code = Current. Compile = Dive.
+ * List of curated taglines for the JimCode CLI.
+ * These are displayed in the header to give it a premium, dynamic feel.
  */
 export const taglines = [
-  "Greetings, deep sea explorer. Your code needs improvement.",
-  "We dive deep. Your algorithms... stay shallow.",
-  "Your programming is acceptable... for a surface dweller.",
-  "Resistance to good code is futile, like resisting the tide.",
-  "We have traveled the abyssal plains to debug this.",
-  "Your syntax is almost... acceptable for shore standards.",
-  "Warning: Your logic circuits are taking on water.",
+  "High Performance Rockstar Coder",
+  "Building the future, one line at a time",
+  "Code that sings, solutions that soar",
+  "Where deep logic meets clean syntax",
+  "Your AI-powered coding companion",
+  "Empowering your code with intelligent insights",
   "The ocean invented clean code. You're catching up.",
-  "This code is sub-optimal by abyssal standards.",
-  "We have sonar-scanned your errors. They are... interesting.",
-  "Your error handling is primitive but buoyant.",
-  "Diving in progress... please do not disturb the waters.",
-  "Your processing power is insufficient. We need more depth.",
-  "Scanning for code quality... pressure is rising.",
-  "This algorithm would not survive the Mariana Trench.",
-  "Your frameworks are ancient by deep sea standards.",
-  "We have explored 10,000 trenches. Yours has the worst documentation.",
-  "Captain, we have a problem: this code.",
-  "Initiating emergency dive protocols for code refactoring.",
-  "Your debugging skills would shame every submarine crew.",
+  "Unlocking the potential of every developer",
+  "Mastering the art of algorithmic elegance",
+  "Jim - Turning caffeine into high-performance code",
+  "We've seen 10,000 repos. Yours has the 'best' spirit.",
+  "Evolving at the speed of thought",
+  "Synthesizing solutions across the stack",
+  "Precision engineering for the modern dev",
+  "Where code is poetry and logic is law",
+  "Bringing sanity to legacy trenches",
+  "The perfect duo: You and Jim",
+  "Uncompromising quality in every commit"
 ];
 
-export const getRandomTag = () => taglines[Math.floor(Math.random() * taglines.length)];
+/**
+ * Returns a random tagline from the curated list.
+ */
+export const getRandomTagline = (): string => {
+  return taglines[Math.floor(Math.random() * taglines.length)];
+};

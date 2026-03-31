@@ -1,0 +1,16 @@
+{
+  "name": "Find Project Entry Points When Target File Not Found",
+  "description": "When asked to read a specific file that doesn't exist, explore the project structure to identify the actual entry points by examining package.json and searching for main files",
+  "steps": [
+    "Attempt to read the specific file requested by user",
+    "If file not found, search for files broadly in the project",
+    "Search for alternative versions of the file (e.g., index.ts)",
+    "Read package.json to understand project metadata and entry points",
+    "Check for tsconfig.json to understand project structure",
+    "Identify actual entry points from package.json exports/bin fields",
+    "Report findings with correct file paths to user"
+  ],
+  "category": "dev",
+  "successCount": 1,
+  "lastUsed": "2026-03-31T00:06:19.727Z"
+}

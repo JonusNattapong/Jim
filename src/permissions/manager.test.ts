@@ -16,16 +16,16 @@ describe("PermissionManager", () => {
     await rm(testRoot, { recursive: true, force: true });
   });
 
-  describe("mode: default", () => {
+  describe("mode: ask", () => {
     it("allows safe tools without approval", async () => {
-      const pm = new PermissionManager("default", testRoot);
+      const pm = new PermissionManager("ask", testRoot);
       const result = await pm.check("read_file", { path: "test.ts" });
       expect(result.allowed).toBe(true);
       expect(result.needsApproval).toBe(false);
     });
 
     it("requires approval for write_file", async () => {
-      const pm = new PermissionManager("default", testRoot);
+      const pm = new PermissionManager("ask", testRoot);
       pm.setPlanApproved(true);
       const result = await pm.check("write_file", { path: "test.ts", content: "hello" });
       expect(result.allowed).toBe(true);
@@ -33,7 +33,7 @@ describe("PermissionManager", () => {
     });
 
     it("requires approval for run_command", async () => {
-      const pm = new PermissionManager("default", testRoot);
+      const pm = new PermissionManager("ask", testRoot);
       pm.setPlanApproved(true);
       const result = await pm.check("run_command", { command: "echo hi" });
       expect(result.allowed).toBe(true);
@@ -64,26 +64,49 @@ describe("PermissionManager", () => {
     });
   });
 
-  describe("mode: dontAsk", () => {
-    it("auto-approves everything", async () => {
-      const pm = new PermissionManager("dontAsk", testRoot);
-      const result = await pm.check("run_command", { command: "rm -rf /" });
-      expect(result.allowed).toBe(true);
-      expect(result.needsApproval).toBe(false);
-    });
-  });
-
-  describe("mode: acceptEdits", () => {
+  describe("mode: edit", () => {
     it("auto-approves edit tools", async () => {
-      const pm = new PermissionManager("acceptEdits", testRoot);
+      const pm = new PermissionManager("edit", testRoot);
       pm.setPlanApproved(true);
       const result = await pm.check("edit_file", { path: "test.ts", old_text: "a", new_text: "b" });
       expect(result.allowed).toBe(true);
       expect(result.needsApproval).toBe(false);
     });
 
+    it("auto-approves write_file", async () => {
+      const pm = new PermissionManager("edit", testRoot);
+      pm.setPlanApproved(true);
+      const result = await pm.check("write_file", { path: "test.ts", content: "hello" });
+      expect(result.allowed).toBe(true);
+      expect(result.needsApproval).toBe(false);
+    });
+
     it("requires approval for run_command", async () => {
-      const pm = new PermissionManager("acceptEdits", testRoot);
+      const pm = new PermissionManager("edit", testRoot);
+      pm.setPlanApproved(true);
+      const result = await pm.check("run_command", { command: "echo hi" });
+      expect(result.allowed).toBe(true);
+      expect(result.needsApproval).toBe(true);
+    });
+
+    it("blocks mutation tools without plan approval", async () => {
+      const pm = new PermissionManager("edit", testRoot);
+      const result = await pm.check("write_file", { path: "test.ts", content: "x" });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain("Plan not approved");
+    });
+  });
+
+  describe("plan approval guardrail", () => {
+    it("blocks mutation tools when plan not approved", async () => {
+      const pm = new PermissionManager("ask", testRoot);
+      const result = await pm.check("run_command", { command: "echo hi" });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain("Plan not approved");
+    });
+
+    it("allows mutation tools after plan approved", async () => {
+      const pm = new PermissionManager("ask", testRoot);
       pm.setPlanApproved(true);
       const result = await pm.check("run_command", { command: "echo hi" });
       expect(result.allowed).toBe(true);
@@ -93,7 +116,8 @@ describe("PermissionManager", () => {
 
   describe("allow/deny patterns", () => {
     it("blocks via deny pattern", async () => {
-      const pm = new PermissionManager("dontAsk", testRoot);
+      const pm = new PermissionManager("edit", testRoot);
+      pm.setPlanApproved(true);
       pm.addDenyPattern("rm -rf");
       const result = await pm.check("run_command", { command: "rm -rf /tmp" });
       expect(result.allowed).toBe(false);
@@ -101,7 +125,7 @@ describe("PermissionManager", () => {
     });
 
     it("auto-approves via allow pattern", async () => {
-      const pm = new PermissionManager("default", testRoot);
+      const pm = new PermissionManager("ask", testRoot);
       pm.addAllowPattern("read_file");
       const result = await pm.check("read_file", { path: "any.ts" });
       expect(result.allowed).toBe(true);
@@ -109,7 +133,7 @@ describe("PermissionManager", () => {
     });
 
     it("deny takes precedence over allow", async () => {
-      const pm = new PermissionManager("default", testRoot);
+      const pm = new PermissionManager("ask", testRoot);
       pm.setPlanApproved(true);
       pm.addAllowPattern("run_command");
       pm.addDenyPattern("sudo");
@@ -120,11 +144,11 @@ describe("PermissionManager", () => {
 
   describe("persistence", () => {
     it("saves and loads decisions", async () => {
-      const pm1 = new PermissionManager("default", testRoot);
+      const pm1 = new PermissionManager("ask", testRoot);
       pm1.setPlanApproved(true);
       await pm1.saveDecision("run_command", { command: "echo hi" }, true);
       
-      const pm2 = new PermissionManager("default", testRoot);
+      const pm2 = new PermissionManager("ask", testRoot);
       pm2.setPlanApproved(true);
       await pm2.loadPersisted();
 
@@ -134,11 +158,11 @@ describe("PermissionManager", () => {
     });
 
     it("persists deny decisions", async () => {
-      const pm1 = new PermissionManager("default", testRoot);
+      const pm1 = new PermissionManager("ask", testRoot);
       pm1.setPlanApproved(true);
       await pm1.saveDecision("run_command", { command: "rm -rf /" }, false);
 
-      const pm2 = new PermissionManager("default", testRoot);
+      const pm2 = new PermissionManager("ask", testRoot);
       pm2.setPlanApproved(true);
       await pm2.loadPersisted();
 
@@ -148,12 +172,12 @@ describe("PermissionManager", () => {
     });
 
     it("handles missing persistence file gracefully", async () => {
-      const pm = new PermissionManager("default", testRoot);
+      const pm = new PermissionManager("ask", testRoot);
       await expect(pm.loadPersisted()).resolves.not.toThrow();
     });
 
     it("saves to .jim/permissions.json under projectRoot", async () => {
-      const pm = new PermissionManager("default", testRoot);
+      const pm = new PermissionManager("ask", testRoot);
       await pm.saveDecision("test_tool", { x: 1 }, true);
 
       const { readFile } = await import("node:fs/promises");
@@ -165,11 +189,11 @@ describe("PermissionManager", () => {
     });
 
     it("saveDecision approves all calls to that tool", async () => {
-      const pm1 = new PermissionManager("default", testRoot);
+      const pm1 = new PermissionManager("ask", testRoot);
       pm1.setPlanApproved(true);
       await pm1.saveDecision("run_command", { command: "echo hi" }, true);
 
-      const pm2 = new PermissionManager("default", testRoot);
+      const pm2 = new PermissionManager("ask", testRoot);
       pm2.setPlanApproved(true);
       await pm2.loadPersisted();
 
@@ -180,11 +204,11 @@ describe("PermissionManager", () => {
     });
 
     it("savePattern allows specific wildcard patterns", async () => {
-      const pm1 = new PermissionManager("default", testRoot);
+      const pm1 = new PermissionManager("ask", testRoot);
       pm1.setPlanApproved(true);
       await pm1.savePattern("run_command:command=echo*", true);
 
-      const pm2 = new PermissionManager("default", testRoot);
+      const pm2 = new PermissionManager("ask", testRoot);
       pm2.setPlanApproved(true);
       await pm2.loadPersisted();
 
@@ -200,11 +224,11 @@ describe("PermissionManager", () => {
 
   describe("mode switching", () => {
     it("setMode changes behavior", async () => {
-      const pm = new PermissionManager("default", testRoot);
+      const pm = new PermissionManager("ask", testRoot);
       pm.setPlanApproved(true);
       expect((await pm.check("write_file", { path: "x" })).needsApproval).toBe(true);
 
-      pm.setMode("dontAsk");
+      pm.setMode("edit");
       expect((await pm.check("write_file", { path: "x" })).needsApproval).toBe(false);
 
       pm.setMode("plan");
@@ -212,8 +236,8 @@ describe("PermissionManager", () => {
     });
 
     it("getMode returns current mode", () => {
-      const pm = new PermissionManager("acceptEdits", testRoot);
-      expect(pm.getMode()).toBe("acceptEdits");
+      const pm = new PermissionManager("edit", testRoot);
+      expect(pm.getMode()).toBe("edit");
     });
   });
 });

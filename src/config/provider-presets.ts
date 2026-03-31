@@ -35,136 +35,269 @@ function field(key: string, label: string, options: Partial<ProviderPresetField>
   return { key, label, ...options };
 }
 
-const OPENAI_COMPATIBLE_FIELDS = [
-  field("apiKey", "API key", { envVar: "OPENAI_API_KEY", required: true, secret: true }),
-  field("baseUrl", "Base URL", { envVar: "OPENAI_BASE_URL", required: true }),
-];
+export const PROVIDER_PRESETS: ProviderPreset[] = [
+  // --- Popular ---
+  {
+    id: "opencode-zen",
+    label: "OpenCode Zen",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "Curated models including Claude, GPT, Gemini and more.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "API key", { envVar: "OPENCODE_API_KEY", required: true, secret: true, placeholder: "Get key at opencode.ai/zen" }),
+      field("baseUrl", "Base URL", { envVar: "OPENCODE_BASE_URL", defaultValue: "https://api.opencode.ai/v1" })
+    ],
+    notes: "Reliable optimized models for coding agents. Use 'public' for free tier."
+  },
+  {
+    id: "opencode-go",
+    label: "OpenCode Go",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "Low cost subscription for everyone.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "API key", { envVar: "OPENCODE_GO_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { envVar: "OPENCODE_GO_BASE_URL", defaultValue: "https://api.opencode.go.ai/v1" })
+    ],
+    notes: "Affordable, balanced inference service."
+  },
+  {
+    id: "anthropic",
+    label: "Anthropic",
+    support: "simple",
+    adapter: "anthropic",
+    description: "Direct access to Claude models, including Pro and Max.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "API key", { envVar: "ANTHROPIC_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { envVar: "ANTHROPIC_BASE_URL", defaultValue: "https://api.anthropic.com" })
+    ],
+    notes: "Native Messages API. Recommended for Claude 3.5 Sonnet."
+  },
+  {
+    id: "openai",
+    label: "OpenAI",
+    support: "simple",
+    adapter: "openai",
+    description: "GPT models for fast, capable general AI tasks.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "API key", { envVar: "OPENAI_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { envVar: "OPENAI_BASE_URL", defaultValue: "https://api.openai.com/v1" })
+    ],
+    notes: "Uses Responses API for newer models (o1, 4o)."
+  },
+  {
+    id: "google",
+    label: "Google Gemini",
+    support: "simple",
+    adapter: "vertex-ai",
+    description: "Gemini models for fast, structured responses.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "API key", { envVar: "GOOGLE_API_KEY", required: true, secret: true }),
+      field("project", "Project ID", { envVar: "GOOGLE_CLOUD_PROJECT", required: true }),
+      field("location", "Location", { envVar: "GOOGLE_CLOUD_LOCATION", defaultValue: "us-central1" })
+    ],
+    notes: "Gemini 1.5 Pro and Flash via Vertex AI or Studio."
+  },
+  {
+    id: "openrouter",
+    label: "OpenRouter",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "Access all supported models from one provider.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "API key", { envVar: "OPENROUTER_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { envVar: "OPENROUTER_BASE_URL", defaultValue: "https://openrouter.ai/api/v1" })
+    ],
+    notes: "Universal gateway with per-model pricing."
+  },
 
-const OPENCODE_PROVIDER_PRESETS: ProviderPreset[] = [
-  { id: "opencode-zen", label: "OpenCode Zen", support: "catalog-only", description: "Hosted OpenCode provider.", source: "opencode", fields: [field("apiKey", "API key", { envVar: "OPENCODE_API_KEY", required: true, secret: true })] },
-  { id: "opencode-go", label: "OpenCode Go", support: "catalog-only", description: "OpenCode hosted Go plans.", source: "opencode", fields: [field("apiKey", "API key", { envVar: "OPENCODE_GO_API_KEY", required: true, secret: true })] },
-  { id: "302-ai", label: "302.AI", support: "catalog-only", description: "Third-party provider from OpenCode docs.", source: "opencode", fields: [field("apiKey", "API key", { envVar: "AI302_API_KEY", required: true, secret: true })] },
-  { id: "amazon-bedrock", label: "Amazon Bedrock", support: "simple", adapter: "bedrock", description: "AWS-native provider with SigV4 signing.", source: "opencode", fields: [
-    field("accessKeyId", "AWS access key", { envVar: "AWS_ACCESS_KEY_ID", required: true, secret: true }),
-    field("secretAccessKey", "AWS secret key", { envVar: "AWS_SECRET_ACCESS_KEY", required: true, secret: true }),
-    field("region", "AWS region", { envVar: "AWS_REGION", required: true, defaultValue: "us-east-1" }),
-    field("baseUrl", "Bedrock base URL", { envVar: "AWS_BEDROCK_BASE_URL", defaultValue: "https://bedrock-runtime.us-east-1.amazonaws.com" }),
-    field("sessionToken", "AWS session token", { envVar: "AWS_SESSION_TOKEN", secret: true }),
-  ], notes: "Needs AWS credentials and region." },
-  { id: "anthropic", label: "Anthropic", support: "simple", adapter: "anthropic", description: "Anthropic native Messages API.", source: "opencode", fields: [
-    field("apiKey", "Anthropic API key", { envVar: "ANTHROPIC_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "ANTHROPIC_BASE_URL", defaultValue: "https://api.anthropic.com" }),
-  ] },
-  { id: "azure-openai", label: "Azure OpenAI", support: "simple", adapter: "azure-openai", description: "Azure-hosted OpenAI deployments.", source: "opencode", fields: [
-    field("apiKey", "Azure API key", { envVar: "AZURE_OPENAI_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Azure endpoint", { envVar: "AZURE_OPENAI_ENDPOINT", required: true, placeholder: "https://resource.openai.azure.com" }),
-    field("deployment", "Deployment", { envVar: "AZURE_OPENAI_DEPLOYMENT", required: true }),
-    field("apiVersion", "API version", { envVar: "AZURE_OPENAI_API_VERSION", defaultValue: "2024-08-01-preview" }),
-  ] },
-  { id: "azure-cognitive-services", label: "Azure Cognitive Services", support: "catalog-only", description: "Azure cognitive services OpenAI endpoint.", source: "opencode", fields: [field("apiKey", "API key", { envVar: "AZURE_API_KEY", required: true, secret: true })] },
-  { id: "baseten", label: "Baseten", support: "catalog-only", description: "Baseten inference provider.", source: "opencode", fields: [field("apiKey", "API key", { envVar: "BASETEN_API_KEY", required: true, secret: true })] },
-  { id: "cerebras", label: "Cerebras", support: "simple", adapter: "openai-compatible", description: "Cerebras OpenAI-compatible inference API.", source: "opencode", fields: [
-    field("apiKey", "Cerebras API key", { envVar: "CEREBRAS_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "CEREBRAS_BASE_URL", defaultValue: "https://api.cerebras.ai/v1" }),
-  ] },
-  { id: "cloudflare-ai-gateway", label: "Cloudflare AI Gateway", support: "catalog-only", description: "Cloudflare AI Gateway routing.", source: "opencode", fields: [field("apiKey", "API token", { envVar: "CLOUDFLARE_API_TOKEN", required: true, secret: true })] },
-  { id: "cloudflare-workers-ai", label: "Cloudflare Workers AI", support: "catalog-only", description: "Cloudflare Workers AI native API.", source: "opencode", fields: [field("apiKey", "API token", { envVar: "CLOUDFLARE_API_TOKEN", required: true, secret: true })] },
-  { id: "cortecs", label: "Cortecs", support: "catalog-only", description: "Cortecs provider from OpenCode docs.", source: "opencode", fields: [field("apiKey", "API key", { envVar: "CORTECS_API_KEY", required: true, secret: true })] },
-  { id: "deepseek", label: "DeepSeek", support: "simple", adapter: "openai-compatible", description: "DeepSeek OpenAI-compatible API.", source: "opencode", fields: [
-    field("apiKey", "DeepSeek API key", { envVar: "DEEPSEEK_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "DEEPSEEK_BASE_URL", defaultValue: "https://api.deepseek.com/v1" }),
-  ] },
-  { id: "deepinfra", label: "Deep Infra", support: "simple", adapter: "openai-compatible", description: "DeepInfra OpenAI-compatible API.", source: "opencode", fields: [
-    field("apiKey", "DeepInfra API key", { envVar: "DEEPINFRA_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "DEEPINFRA_BASE_URL", defaultValue: "https://api.deepinfra.com/v1/openai" }),
-  ] },
-  { id: "firmware", label: "Firmware", support: "catalog-only", description: "Firmware provider from OpenCode docs.", source: "opencode", fields: [field("apiKey", "API key", { envVar: "FIRMWARE_API_KEY", required: true, secret: true })] },
-  { id: "fireworks-ai", label: "Fireworks AI", support: "simple", adapter: "openai-compatible", description: "Fireworks OpenAI-compatible endpoint.", source: "opencode", fields: [
-    field("apiKey", "Fireworks API key", { envVar: "FIREWORKS_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "FIREWORKS_BASE_URL", defaultValue: "https://api.fireworks.ai/inference/v1" }),
-  ] },
-  { id: "gitlab-duo", label: "GitLab Duo", support: "catalog-only", description: "GitLab Duo / Agent Platform provider.", source: "opencode", fields: [field("apiKey", "GitLab token", { envVar: "GITLAB_TOKEN", required: true, secret: true })] },
-  { id: "github-copilot", label: "GitHub Copilot", support: "catalog-only", description: "GitHub Copilot auth flow.", source: "opencode", fields: [field("apiKey", "GitHub token", { envVar: "GITHUB_TOKEN", required: true, secret: true })] },
-  { id: "google-vertex-ai", label: "Google Vertex AI", support: "simple", adapter: "vertex-ai", description: "Vertex AI native API for Gemini models.", source: "opencode", fields: [
-    field("apiKey", "Google access token or API key", { envVar: "GOOGLE_ACCESS_TOKEN", required: true, secret: true }),
-    field("project", "Google Cloud project", { envVar: "GOOGLE_CLOUD_PROJECT", required: true }),
-    field("location", "Google Cloud location", { envVar: "GOOGLE_CLOUD_LOCATION", required: true, defaultValue: "us-central1" }),
-    field("baseUrl", "Base URL", { envVar: "VERTEX_AI_BASE_URL", defaultValue: "https://aiplatform.googleapis.com" }),
-  ], notes: "Use an OAuth bearer token or service-issued access token in the API key field." },
-  { id: "groq", label: "Groq", support: "simple", adapter: "openai-compatible", description: "Groq OpenAI-compatible API.", source: "opencode", fields: [
-    field("apiKey", "Groq API key", { envVar: "GROQ_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "GROQ_BASE_URL", defaultValue: "https://api.groq.com/openai/v1" }),
-  ] },
-  { id: "hugging-face", label: "Hugging Face", support: "catalog-only", description: "Hugging Face inference endpoints.", source: "opencode", fields: [field("apiKey", "API token", { envVar: "HF_TOKEN", required: true, secret: true })] },
-  { id: "helicone", label: "Helicone", support: "simple", adapter: "openai-compatible", description: "Helicone gateway/proxy provider.", source: "opencode", fields: [
-    field("apiKey", "Helicone API key", { envVar: "HELICONE_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "HELICONE_BASE_URL", defaultValue: "https://oai.helicone.ai/v1" }),
-  ] },
-  { id: "llama-cpp", label: "llama.cpp", support: "simple", adapter: "openai-compatible", description: "llama.cpp OpenAI-compatible llama-server.", source: "opencode", fields: [
-    field("apiKey", "API key", { envVar: "LLAMA_CPP_API_KEY", secret: true, defaultValue: "local" }),
-    field("baseUrl", "Base URL", { envVar: "LLAMA_CPP_BASE_URL", defaultValue: "http://127.0.0.1:8080/v1", required: true }),
-  ] },
-  { id: "io-net", label: "IO.NET", support: "catalog-only", description: "IO.NET inference provider.", source: "opencode", fields: [field("apiKey", "API key", { envVar: "IONET_API_KEY", required: true, secret: true })] },
-  { id: "lm-studio", label: "LM Studio", support: "simple", adapter: "openai-compatible", description: "Local LM Studio OpenAI-compatible server.", source: "opencode", fields: [
-    field("apiKey", "API key", { envVar: "LM_STUDIO_API_KEY", secret: true, defaultValue: "local" }),
-    field("baseUrl", "Base URL", { envVar: "LM_STUDIO_BASE_URL", defaultValue: "http://127.0.0.1:1234/v1", required: true }),
-  ], notes: "Uses a local placeholder key if no env is set." },
-  { id: "moonshot-ai", label: "Moonshot AI", support: "simple", adapter: "openai-compatible", description: "Moonshot OpenAI-compatible API.", source: "opencode", fields: [
-    field("apiKey", "Moonshot API key", { envVar: "MOONSHOT_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "MOONSHOT_BASE_URL", defaultValue: "https://api.moonshot.ai/v1" }),
-  ] },
-  { id: "minimax", label: "MiniMax", support: "simple", adapter: "openai-compatible", description: "MiniMax OpenAI-compatible API.", source: "opencode", fields: [
-    field("apiKey", "MiniMax API key", { envVar: "MINIMAX_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "MINIMAX_BASE_URL", defaultValue: "https://api.minimax.io/v1" }),
-  ] },
-  { id: "kilocode", label: "Kilocode", support: "simple", adapter: "openai-compatible", description: "Kilocode high-speed inference API.", source: "opencode", fields: [
-    field("apiKey", "Kilocode API key", { envVar: "KILOCODE_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "KILOCODE_BASE_URL", defaultValue: "https://api.kilocode.com/v1" }),
-  ] },
-  { id: "nebius-token-factory", label: "Nebius Token Factory", support: "catalog-only", description: "Nebius token-based provider.", source: "opencode", fields: [field("apiKey", "API key", { envVar: "NEBIUS_API_KEY", required: true, secret: true })] },
-  { id: "ollama", label: "Ollama", support: "simple", adapter: "openai-compatible", description: "Local Ollama OpenAI-compatible endpoint.", source: "opencode", fields: [
-    field("apiKey", "API key", { envVar: "OLLAMA_API_KEY", secret: true, defaultValue: "local" }),
-    field("baseUrl", "Base URL", { envVar: "OLLAMA_BASE_URL", defaultValue: "http://127.0.0.1:11434/v1", required: true }),
-  ], notes: "Uses a local placeholder key if no env is set." },
-  { id: "ollama-cloud", label: "Ollama Cloud", support: "catalog-only", description: "Hosted Ollama provider.", source: "opencode", fields: [field("apiKey", "API key", { envVar: "OLLAMA_CLOUD_API_KEY", required: true, secret: true })] },
-  { id: "openai", label: "OpenAI", support: "simple", adapter: "openai", description: "Official OpenAI Responses API.", source: "opencode", fields: [
-    field("apiKey", "OpenAI API key", { envVar: "OPENAI_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "OPENAI_BASE_URL", defaultValue: "https://api.openai.com/v1" }),
-  ] },
-  { id: "openrouter", label: "OpenRouter", support: "simple", adapter: "openai-compatible", description: "OpenRouter OpenAI-compatible gateway.", source: "opencode", fields: [
-    field("apiKey", "OpenRouter API key", { envVar: "OPENROUTER_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "OPENROUTER_BASE_URL", defaultValue: "https://openrouter.ai/api/v1" }),
-  ] },
-  { id: "sap-ai-core", label: "SAP AI Core", support: "catalog-only", description: "SAP AI Core provider.", source: "opencode", fields: [field("serviceKey", "Service key", { envVar: "AICORE_SERVICE_KEY", required: true, secret: true })] },
-  { id: "stackit", label: "STACKIT", support: "catalog-only", description: "STACKIT AI models.", source: "opencode", fields: [field("apiKey", "API key", { envVar: "STACKIT_API_KEY", required: true, secret: true })] },
-  { id: "ovhcloud-ai-endpoints", label: "OVHcloud AI Endpoints", support: "catalog-only", description: "OVHcloud AI Endpoints provider.", source: "opencode", fields: [field("apiKey", "API key", { envVar: "OVHCLOUD_AI_API_KEY", required: true, secret: true })] },
-  { id: "scaleway", label: "Scaleway", support: "simple", adapter: "openai-compatible", description: "Scaleway Generative APIs through an OpenAI-compatible endpoint.", source: "opencode", fields: [
-    field("apiKey", "Scaleway API key", { envVar: "SCALEWAY_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "SCALEWAY_BASE_URL", defaultValue: "https://api.scaleway.ai/v1" }),
-  ] },
-  { id: "together-ai", label: "Together AI", support: "simple", adapter: "openai-compatible", description: "Together AI OpenAI-compatible endpoint.", source: "opencode", fields: [
-    field("apiKey", "Together API key", { envVar: "TOGETHER_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "TOGETHER_BASE_URL", defaultValue: "https://api.together.xyz/v1" }),
-  ] },
-  { id: "venice-ai", label: "Venice AI", support: "simple", adapter: "openai-compatible", description: "Venice AI OpenAI-compatible API.", source: "opencode", fields: [
-    field("apiKey", "Venice API key", { envVar: "VENICE_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "VENICE_BASE_URL", defaultValue: "https://api.venice.ai/api/v1" }),
-  ] },
-  { id: "vercel-ai-gateway", label: "Vercel AI Gateway", support: "catalog-only", description: "Vercel AI Gateway provider.", source: "opencode", fields: [field("apiKey", "API key", { envVar: "AI_GATEWAY_API_KEY", required: true, secret: true })] },
-  { id: "xai", label: "xAI", support: "simple", adapter: "openai-compatible", description: "xAI OpenAI-compatible endpoint.", source: "opencode", fields: [
-    field("apiKey", "xAI API key", { envVar: "XAI_API_KEY", required: true, secret: true }),
-    field("baseUrl", "Base URL", { envVar: "XAI_BASE_URL", defaultValue: "https://api.x.ai/v1" }),
-  ] },
-  { id: "z-ai", label: "Z.AI", support: "catalog-only", description: "Z.AI provider.", source: "opencode", fields: [field("apiKey", "API key", { envVar: "ZAI_API_KEY", required: true, secret: true })] },
-  { id: "zenmux", label: "ZenMux", support: "catalog-only", description: "ZenMux gateway.", source: "opencode", fields: [field("apiKey", "API key", { envVar: "ZENMUX_API_KEY", required: true, secret: true })] },
+  // --- Other ---
+  {
+    id: "azure-openai",
+    label: "Azure OpenAI",
+    support: "simple",
+    adapter: "azure-openai",
+    description: "Enterprise-grade OpenAI on Microsoft Azure.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "Azure API key", { envVar: "AZURE_OPENAI_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Resource Endpoint", { envVar: "AZURE_OPENAI_ENDPOINT", required: true, placeholder: "https://res.openai.azure.com" }),
+      field("deployment", "Deployment Name", { envVar: "AZURE_OPENAI_DEPLOYMENT", required: true }),
+      field("apiVersion", "API Version", { envVar: "AZURE_OPENAI_API_VERSION", defaultValue: "2024-08-01-preview" })
+    ]
+  },
+  {
+    id: "amazon-bedrock",
+    label: "Amazon Bedrock",
+    support: "simple",
+    adapter: "bedrock",
+    description: "AWS-native provider with SigV4 signing.",
+    source: "opencode",
+    fields: [
+      field("accessKeyId", "AWS access key", { envVar: "AWS_ACCESS_KEY_ID", required: true, secret: true }),
+      field("secretAccessKey", "AWS secret key", { envVar: "AWS_SECRET_ACCESS_KEY", required: true, secret: true }),
+      field("region", "AWS region", { envVar: "AWS_REGION", defaultValue: "us-east-1" })
+    ]
+  },
+  {
+    id: "groq",
+    label: "Groq",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "Ultra-fast inference for open source models.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "Groq API key", { envVar: "GROQ_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { envVar: "GROQ_BASE_URL", defaultValue: "https://api.groq.com/openai/v1" })
+    ]
+  },
+  {
+    id: "mistral",
+    label: "Mistral AI",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "Mistral and Mixtral models.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "API key", { envVar: "MISTRAL_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { defaultValue: "https://api.mistral.ai/v1" })
+    ]
+  },
+  {
+    id: "xai",
+    label: "xAI",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "Grok models via OpenAI-compatible endpoint.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "xAI API key", { envVar: "XAI_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { envVar: "XAI_BASE_URL", defaultValue: "https://api.x.ai/v1" })
+    ]
+  },
+  {
+    id: "perplexity",
+    label: "Perplexity",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "Search-augmented LLM API.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "API key", { envVar: "PERPLEXITY_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { defaultValue: "https://api.perplexity.ai" })
+    ]
+  },
+  {
+    id: "together-ai",
+    label: "Together AI",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "Open source models at high speed.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "Together API key", { envVar: "TOGETHER_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { envVar: "TOGETHER_BASE_URL", defaultValue: "https://api.together.xyz/v1" })
+    ]
+  },
+  {
+    id: "deepinfra",
+    label: "DeepInfra",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "Low-cost inference for open models.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "DeepInfra API key", { envVar: "DEEPINFRA_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { envVar: "DEEPINFRA_BASE_URL", defaultValue: "https://api.deepinfra.com/v1/openai" })
+    ]
+  },
+  {
+    id: "cerebras",
+    label: "Cerebras",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "Wafer-scale AI inference.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "Cerebras API key", { envVar: "CEREBRAS_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { envVar: "CEREBRAS_BASE_URL", defaultValue: "https://api.cerebras.ai/v1" })
+    ]
+  },
+  {
+    id: "deepseek",
+    label: "DeepSeek",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "High-performance models like DeepSeek V3 and R1.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "DeepSeek API key", { envVar: "DEEPSEEK_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { envVar: "DEEPSEEK_BASE_URL", defaultValue: "https://api.deepseek.com/v1" })
+    ]
+  },
+  {
+    id: "kilocode",
+    label: "Kilocode",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "High-speed coding specialized models.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "Kilocode API key", { envVar: "KILOCODE_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { envVar: "KILOCODE_BASE_URL", defaultValue: "https://api.kilocode.com/v1" })
+    ]
+  },
+  {
+    id: "minimax",
+    label: "MiniMax",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "MiniMax-m2.5 specialized in short/long context.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "MiniMax API key", { envVar: "MINIMAX_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { envVar: "MINIMAX_BASE_URL", defaultValue: "https://api.minimax.io/v1" })
+    ]
+  },
+  {
+    id: "moonshot",
+    label: "Moonshot AI",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "Kimi models for long context research.",
+    source: "opencode",
+    fields: [
+      field("apiKey", "Moonshot API key", { envVar: "MOONSHOT_API_KEY", required: true, secret: true }),
+      field("baseUrl", "Base URL", { envVar: "MOONSHOT_BASE_URL", defaultValue: "https://api.moonshot.ai/v1" })
+    ]
+  },
+  {
+    id: "ollama",
+    label: "Ollama (Local)",
+    support: "simple",
+    adapter: "openai-compatible",
+    description: "Run models locally on your machine.",
+    source: "opencode",
+    fields: [
+      field("baseUrl", "Base URL", { envVar: "OLLAMA_BASE_URL", defaultValue: "http://localhost:11434/v1" }),
+      field("apiKey", "API key", { defaultValue: "local", secret: true })
+    ],
+    notes: "Requires Ollama to be running locally (`ollama serve`)."
+  },
 ];
 
 export function getProviderPresets(): ProviderPreset[] {
-  return [...OPENCODE_PROVIDER_PRESETS];
+  return [...PROVIDER_PRESETS];
 }
 
 export function getProviderPreset(id: string): ProviderPreset | undefined {
-  return OPENCODE_PROVIDER_PRESETS.find((preset) => preset.id === id);
+  return PROVIDER_PRESETS.find((preset) => preset.id === id);
 }
 
 export function resolveProviderPreset(

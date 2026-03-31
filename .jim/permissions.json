@@ -1,0 +1,20 @@
+[
+  {
+    "toolName": "ts_check",
+    "pattern": "*",
+    "approved": true,
+    "timestamp": "2026-03-31T01:19:37.172Z"
+  },
+  {
+    "toolName": "spawn_agent",
+    "pattern": "*",
+    "approved": true,
+    "timestamp": "2026-03-31T01:19:37.172Z"
+  },
+  {
+    "toolName": "office_doctor",
+    "pattern": "*",
+    "approved": true,
+    "timestamp": "2026-03-31T01:19:37.172Z"
+  }
+]

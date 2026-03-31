@@ -14,7 +14,7 @@ export const ExpandableBlock: React.FC<{ title: string; content: string }> = ({ 
 
   const cleanContent = content || "";
   const lines = cleanContent.split("\n");
-  const isLarge = lines.length > 5;
+  const isLarge = lines.length > 20;
 
   if (!isLarge) {
     return (
@@ -35,7 +35,7 @@ export const ExpandableBlock: React.FC<{ title: string; content: string }> = ({ 
       <Box flexDirection="row" justifyContent="space-between">
          <Text color={isFocused ? theme.warning : theme.primary} bold>{title}</Text>
          <Text color={isFocused ? theme.warning : theme.border}>
-           {expanded ? "[-] กด Enter เพื่อพับเก็บ" : `[+] ซ่อนอยู่ ${(lines.length - 5).toLocaleString()} บรรทัด (กด Enter เพื่อกาง)`}
+           {expanded ? "[-] กด Enter เพื่อพับเก็บ" : `[+] ซ่อนอยู่ ${(lines.length - 10).toLocaleString()} บรรทัด (กด Enter เพื่อกาง)`}
          </Text>
       </Box>
       {expanded ? (
@@ -44,7 +44,7 @@ export const ExpandableBlock: React.FC<{ title: string; content: string }> = ({ 
         </Box>
       ) : (
         <Box marginTop={1} flexDirection="column">
-          <Text dimColor>{lines.slice(0, 5).join("\n")}</Text>
+          <Text dimColor>{lines.slice(0, 10).join("\n")}</Text>
           <Text dimColor>...</Text>
         </Box>
       )}

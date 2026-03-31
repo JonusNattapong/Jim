@@ -7,7 +7,7 @@ export const AgentConfigSchema = z.object({
   maxTurns: z.number().int().min(1).max(100).default(30),
   maxToolOutput: z.number().int().min(100).max(100_000).default(5000),
   projectRoot: z.string().min(1),
-  permissionMode: z.enum(["plan", "default", "acceptEdits", "dontAsk"]).default("default"),
+  permissionMode: z.enum(["plan", "edit", "ask"]).default("ask"),
   streaming: z.boolean().default(false),
   api: z.enum(["auto", "openai", "openai-compatible", "chat-completions", "responses"]).default("auto"),
   providerPreset: z.string().optional(),

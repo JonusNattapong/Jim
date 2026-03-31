@@ -6,9 +6,10 @@ interface ThoughtProcessProps {
   content: string;
   isStreaming?: boolean;
   elapsed?: number;
+  tokens?: number;
 }
 
-export const ThoughtProcess: React.FC<ThoughtProcessProps> = ({ content, isStreaming, elapsed }) => {
+export const ThoughtProcess: React.FC<ThoughtProcessProps> = ({ content, isStreaming, elapsed, tokens }) => {
   const [cursor, setCursor] = useState(true);
 
   useEffect(() => {
@@ -23,15 +24,20 @@ export const ThoughtProcess: React.FC<ThoughtProcessProps> = ({ content, isStrea
   const maxLines = 30;
   const truncated = lines.length > maxLines;
   const shown = truncated ? lines.slice(-maxLines) : lines;
+  const meta: string[] = [];
+  if (elapsed != null && elapsed > 0) {
+    meta.push(elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`);
+  }
+  if (tokens !== undefined) {
+    meta.push(`↓ ${(tokens / 1000).toFixed(1)}k tokens`);
+  }
 
   return (
     <Box flexDirection="column" marginTop={1} marginLeft={2}>
       {/* Label */}
       <Box>
         <Text color={theme.border} bold>thinking</Text>
-        {elapsed != null && elapsed > 0 && (
-          <Text dimColor> ({elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`})</Text>
-        )}
+        {meta.length > 0 && <Text dimColor> ({meta.join(" • ")})</Text>}
         {isStreaming && (
           <Text color={theme.border}> {cursor ? "▋" : " "}</Text>
         )}

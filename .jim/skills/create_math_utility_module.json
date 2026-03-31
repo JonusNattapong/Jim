@@ -1,0 +1,15 @@
+{
+  "name": "Create Math Utility Module",
+  "description": "Create a TypeScript utility file in a designated folder with mathematical functions, including input validation (error handling) and JSDoc documentation",
+  "steps": [
+    "Check if target folder exists, create if needed",
+    "Create new TypeScript file with functions",
+    "Implement mathematical logic using appropriate formulas",
+    "Add error handling for invalid inputs (negative values, etc.)",
+    "Add JSDoc comments for documentation",
+    "Summarize completed work"
+  ],
+  "category": "dev",
+  "successCount": 1,
+  "lastUsed": "2026-03-31T01:12:49.542Z"
+}

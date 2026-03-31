@@ -99,7 +99,7 @@ export class Agent {
     this.memory = new MemoryManager(config.projectRoot);
     this.sessions = new SessionManager(config.projectRoot);
     this.hooks = new HookEngine();
-    this.permissions = new PermissionManager(config.permissionMode ?? "default", config.projectRoot);
+    this.permissions = new PermissionManager(config.permissionMode ?? "ask", config.projectRoot);
     this.sessionId = this.sessions.generateId();
     this.log = childLogger({ component: "agent", model: config.model, session: this.sessionId });
 
@@ -174,7 +174,7 @@ export class Agent {
 
         const reRegisterMcpTools = () => {
           const newDefs = mcp.getAllToolDefinitions();
-          const newDefMap = new Map(newDefs.map((d) => [d.function.name, d]));
+          const newDefMap = new Map(newDefs.filter(d => d?.function?.name).map((d) => [d.function.name, d]));
           for (const [toolName, handler] of mcp.getAllHandlers()) {
             const def = newDefMap.get(toolName);
             if (def) {
@@ -313,9 +313,11 @@ export class Agent {
         const toolResults: ChatCompletionToolMessageParam[] = [];
 
         for (const toolCall of toolCalls) {
-          const name = toolCall.function.name;
+          const name = toolCall?.function?.name ?? (toolCall as any)?.name;
+          if (!name) continue;
+
           let args: Record<string, unknown>;
-          try { args = JSON.parse(toolCall.function.arguments); }
+          try { args = JSON.parse(toolCall?.function?.arguments ?? (toolCall as any)?.arguments ?? "{}"); }
           catch { args = {}; }
 
           callbacks.onToolCall?.(name, args);
@@ -633,7 +635,7 @@ export class Agent {
         const { buildMcpManagerHandler } = await import("../tools/mcp_dynamic.js");
         const reRegister = () => {
           const newDefs = mcp.getAllToolDefinitions();
-          const newDefMap = new Map(newDefs.map((d) => [d.function.name, d]));
+          const newDefMap = new Map(newDefs.filter(d => d?.function?.name).map((d) => [d.function.name, d]));
           for (const [toolName, handler] of mcp.getAllHandlers()) {
             const def = newDefMap.get(toolName);
             if (def) {
@@ -731,14 +733,16 @@ export class Agent {
   }
 
   private inferProviderForModel(model: string): ProviderName {
-    // 1. Use the current preset's adapter if available
+    // 1. If model has a provider prefix (e.g. "opencode/mimo-v2-pro-free"),
+    //    infer from the model name first. This ensures the correct provider
+    //    is used even when the preset's adapter differs.
+    if (model.includes("/")) {
+      return inferProviderFromModel(model);
+    }
+    // 2. Use the current preset's adapter if available
     const preset = this.config.providerPreset ? getProviderPreset(this.config.providerPreset) : undefined;
     if (preset?.adapter) {
       return preset.adapter;
-    }
-    // 2. Prioritize slash-based inference from the model name itself
-    if (model.includes("/")) {
-      return inferProviderFromModel(model);
     }
     // 3. Fallback to normal inference
     return inferProviderFromModel(model);
@@ -767,20 +771,25 @@ export class Agent {
       return await this.provider.complete(messages, toolDefs, { model: this.config.model });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      const shouldRetry =
-        /400/i.test(msg) &&
+      const shouldRetry = 
+        (/400/i.test(msg) || /404/i.test(msg)) && 
         (
-          msg.includes('expected "function"') ||
-          msg.includes("Invalid input") ||
-          msg.includes("tool") ||
-          msg.includes("Responses API error")
+          msg.includes('expected "function"') || 
+          msg.includes("Invalid input") || 
+          msg.includes("tool") || 
+          msg.includes("API error") ||
+          (msg.includes("not found") && !msg.toLowerCase().includes("file")) 
         );
 
       if (!shouldRetry) throw err;
 
+      // Logic: if current provider failed, try to flip between openai and openai-compatible
+      // or switch to openai-compatible if it's some other provider (like anthropic/bedrock)
       const fallbackProvider: ProviderName = this.provider.name === "openai" ? "openai-compatible" : "openai";
-      this.log.warn({ error: msg, from: this.provider.name, to: fallbackProvider }, "provider schema mismatch, retrying with fallback provider");
+      
+      this.log.warn({ error: msg, from: this.provider.name, to: fallbackProvider }, "provider issue detected, retrying with fallback provider");
       callbacks.onThinking?.(`[Provider fallback] Retrying with ${fallbackProvider}...`);
+      
       this.provider = createProvider(this.client, { provider: fallbackProvider });
 
       if ((this.config.api ?? "auto") === "auto") {
@@ -1108,10 +1117,11 @@ export class Agent {
   }
   getPluginCatalog(): Array<{ name: string; type: "builtin" | "mcp"; toolCount: number; tools: string[]; healthy?: boolean }> {
     const defs = this.tools.getDefinitions();
-    const builtins = defs.filter((def) => !def.function.name.includes("__")).map((def) => def.function.name);
+    const builtins = defs.filter((def) => def?.function?.name && !def.function.name.includes("__")).map((def) => def.function.name);
     const byServer = new Map<string, string[]>();
 
     for (const def of defs) {
+      if (!def?.function?.name) continue;
       const [server, tool] = def.function.name.split("__");
       if (!tool) continue;
       const tools = byServer.get(server) ?? [];
@@ -1161,22 +1171,52 @@ export class Agent {
 
   getAvailableModels(): string[] {
     const staticModels = [
-      "minimax/minimax-m2.5:free",
-      "minimax/minimax-m2.7",
-      "kilocode/kilocode-frontier",
-      "kilo-auto/balanced",
+      // --- OpenCode Optimized ---
+      "opencode/mimo-v2-pro",
+      "opencode/kilo-v1-large",
+      "opencode/zen-claude-3.5-sonnet",
+
+      // --- OpenAI ---
+      "openai/gpt-4o",
+      "openai/gpt-4o-mini",
+      "openai/o1-preview",
+      "openai/o3-mini",
+
+      // --- Anthropic ---
       "anthropic/claude-3-5-sonnet-20241022",
       "anthropic/claude-3-5-haiku-20241022",
-      "openai/gpt-4o",
-      "openai/o1-mini",
-      "google/gemini-1.5-pro",
-      "google/gemini-1.5-flash",
-      "openrouter/google/gemini-pro-1.5",
+      "anthropic/claude-3-opus-20240229",
+
+      // --- Google ---
+      "google/gemini-1.5-pro-002",
+      "google/gemini-1.5-flash-002",
+      "google/gemini-2.0-flash-exp",
+
+      // --- DeepSeek ---
+      "deepseek/deepseek-chat",
+      "deepseek/deepseek-coder",
+      "deepseek/deepseek-reasoner",
+
+      // --- Mistral ---
+      "mistral/mistral-large-latest",
+      "mistral/pixtral-large-latest",
+
+      // --- Groq ---
+      "groq/llama-3.3-70b-versatile",
+      "groq/mixtral-8x7b-32768",
+
+      // --- OpenRouter ---
       "openrouter/anthropic/claude-3.5-sonnet",
+      "openrouter/google/gemini-pro-1.5",
+      "openrouter/meta-llama/llama-3.1-405b",
     ];
 
-    const unique = new Set([...staticModels, ...this.modelsCache]);
-    return Array.from(unique);
+    // If we have fetched models from the API, prioritize them for accuracy
+    if (this.modelsCache.length > 0) {
+      return this.modelsCache;
+    }
+
+    return staticModels;
   }
 
   getReflexionEngine(): ReflexionEngine {

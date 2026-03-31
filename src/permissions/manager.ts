@@ -3,7 +3,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { homedir } from "node:os";
 
-export type PermissionMode = "plan" | "default" | "acceptEdits" | "dontAsk";
+export type PermissionMode = "plan" | "edit" | "ask";
 
 interface PermissionEntry {
   toolName: string;
@@ -58,9 +58,8 @@ function wildcardMatch(pattern: string, signature: string): boolean {
 /**
  * Permission levels:
  * - plan: Read-only, no edits or commands
- * - default: Ask before edits and shell commands
- * - acceptEdits: Auto-approve file edits, ask for shell
- * - dontAsk: Auto-approve everything (except dangerous)
+ * - edit: Auto-approve file edits, ask for shell commands
+ * - ask: Ask before all edits and shell commands
  */
 export class PermissionManager {
   private mode: PermissionMode;
@@ -70,7 +69,7 @@ export class PermissionManager {
   private projectRoot: string;
   private planApproved = false;
 
-  constructor(mode: PermissionMode = "default", projectRoot: string = ".") {
+  constructor(mode: PermissionMode = "ask", projectRoot: string = ".") {
     this.mode = mode;
     this.projectRoot = projectRoot;
   }
@@ -177,7 +176,7 @@ export class PermissionManager {
   }> {
     // Plan Approval Guardrail
     const mutationTools = ["edit_file", "write_file", "run_command", "delete_file", "apply_diff"];
-    if (mutationTools.includes(toolName) && !this.planApproved && this.mode !== "dontAsk") {
+    if (mutationTools.includes(toolName) && !this.planApproved) {
       return { 
         allowed: false, 
         reason: "Plan not approved. You must use todo_write to propose a plan and ask the user for approval before using mutation tools.", 
@@ -219,19 +218,14 @@ export class PermissionManager {
       return { allowed: false, reason: "Plan mode: read-only", needsApproval: false };
     }
 
-    // dontAsk mode
-    if (this.mode === "dontAsk") {
-      return { allowed: true, needsApproval: false };
-    }
-
-    // acceptEdits mode
-    if (this.mode === "acceptEdits") {
+    // edit mode
+    if (this.mode === "edit") {
       const editTools = ["read_file", "list_files", "grep", "edit_file", "write_file", "get_project_info", "git_command"];
       if (editTools.includes(toolName)) return { allowed: true, needsApproval: false };
       if (toolName === "run_command") return { allowed: true, needsApproval: true };
     }
 
-    // Default mode
+    // ask mode
     const safeTools = [
       "read_file", "list_files", "grep", "get_project_info", "git_command",
       "web_fetch", "web_search", "todo_write", "ask_user_choice", "list_plugins",

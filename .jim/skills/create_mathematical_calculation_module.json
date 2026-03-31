@@ -1,0 +1,15 @@
+{
+  "name": "Create Mathematical Calculation Module",
+  "description": "Creates a TypeScript module with mathematical calculation functions (such as sphere volume), including input validation, error handling, and JSDoc documentation",
+  "steps": [
+    "Check if required folder exists, create it if not",
+    "Create the calculation file (e.g., sphere.ts) in the target directory",
+    "Implement the mathematical formula (e.g., V = (4/3) * π * r³)",
+    "Add input validation with proper error handling for negative/invalid values",
+    "Add JSDoc documentation with parameter descriptions and throws clauses",
+    "Provide a summary with the created functions and their usage"
+  ],
+  "category": "dev",
+  "successCount": 1,
+  "lastUsed": "2026-03-31T01:10:18.526Z"
+}

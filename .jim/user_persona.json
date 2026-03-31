@@ -1,0 +1,33 @@
+{
+  "codingStyle": [
+    "Works with TypeScript/Node.js projects",
+    "Uses Ink (React-based CLI framework)",
+    "Project structure: CLI entry at src/cli/index.tsx, agent core at src/agent/loop.ts",
+    "Appreciates well-documented code with JSDoc comments",
+    "Expects proper error handling for edge cases like negative values",
+    "Uses hidden folders like .workspace for project organization"
+  ],
+  "preferences": [
+    "Prefers Thai language for communication",
+    "Uses pnpm as package manager",
+    "Working on TypeScript/Node.js CLI project using Ink",
+    "Working on project at D:\\Projects\\Github\\k6\\",
+    "Working on project at D:\\\\Projects\\\\Github\\\\k6\\",
+    "Prefers structured task lists with todo system before executing changes",
+    "Appreciates summaries of completed work"
+  ],
+  "toolUsagePatterns": {},
+  "communicationStyle": "Casual and friendly, direct when requesting tasks, explores project structure by asking about specific files",
+  "knownConcepts": [
+    "TypeScript compilation and error checking",
+    "Running tests and build scripts",
+    "CLI tool development with React/Ink",
+    "Creating markdown documentation files",
+    "Project named 'jim' - AI coding agent with 15 tools",
+    "Entry point is src/cli/index.tsx not src/index.ts",
+    "Mathematical formulas in code (e.g., sphere volume V = (4/3) × π × r³)",
+    "JSDoc documentation standards",
+    "Todo/plan approval workflow before mutations"
+  ],
+  "lastUpdated": "2026-03-31T01:17:04.721Z"
+}

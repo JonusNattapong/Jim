@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
 import { theme } from "../theme.js";
+import { toolLabel } from "../tool-labels.js";
 import { TaskBoard, parseTaskBoard } from "./TaskBoard.js";
 import { ExpandableBlock } from "./ExpandableBlock.js";
 
@@ -39,7 +40,7 @@ const AnimatedScanner: React.FC<{ name: string; args: string }> = ({ name, args 
     <Box>
       <Text color={theme.primary} bold>[{bar.join("")}] </Text>
       <Text color={theme.primary}>executing ➡ </Text>
-      <Text color={theme.text} bold>{name} </Text>
+      <Text color={theme.text} bold>{toolLabel(name)} </Text>
       <Text dimColor>{args.slice(0, 40)}{args.length > 40 ? "..." : ""}</Text>
     </Box>
   );
@@ -54,7 +55,7 @@ export const ToolActivity: React.FC<ToolActivityProps> = ({ calls }) => {
         <Box>
           <Text color={theme.warning}>*</Text>
           <Text> </Text>
-          <Text color={theme.warning} bold>{call.name}</Text>
+          <Text color={theme.warning} bold>{toolLabel(call.name)}</Text>
           <Text dimColor> waiting for approval</Text>
         </Box>
       );
@@ -64,7 +65,7 @@ export const ToolActivity: React.FC<ToolActivityProps> = ({ calls }) => {
       <Box>
         <Text color={theme.primary}>•</Text>
         <Text> </Text>
-        <Text color={theme.primary} bold>{call.name}</Text>
+        <Text color={theme.primary} bold>{toolLabel(call.name)}</Text>
         <Text dimColor> awaiting transmission</Text>
       </Box>
     );
@@ -90,14 +91,14 @@ export const ToolActivity: React.FC<ToolActivityProps> = ({ calls }) => {
                   <Text color={theme.success}>✓</Text>
                 )}
                 <Text> </Text>
-                <Text color={call.status === "error" ? theme.error : theme.success} bold>{call.name}</Text>
+                <Text color={call.status === "error" ? theme.error : theme.success} bold>{toolLabel(call.name)}</Text>
                 <Text dimColor> {call.args.slice(0, 60)}{call.args.length > 60 ? "..." : ""}</Text>
               </Box>
             )}
 
             {call.rawResult && !board ? (
               <Box marginLeft={4}>
-                <ExpandableBlock title={`Output: ${call.name}`} content={call.rawResult} />
+                <ExpandableBlock title={`Output: ${toolLabel(call.name)}`} content={call.rawResult} />
               </Box>
             ) : call.result && !board ? (
               <Box marginLeft={4}>

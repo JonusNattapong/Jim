@@ -129,8 +129,9 @@ export class ContextManager {
         const msgRecord = msg as unknown as Record<string, unknown>;
         if (msgRecord.tool_calls && Array.isArray(msgRecord.tool_calls)) {
           for (const tc of msgRecord.tool_calls) {
-            const tcObj = tc as unknown as { function: { name: string } };
-            parts.push(`Tool called: ${tcObj.function.name}`);
+            const tcAny = tc as any;
+            const toolName = tcAny.function?.name ?? tcAny.name ?? "unknown";
+            parts.push(`Tool called: ${toolName}`);
           }
         }
       } else if (msg.role === "tool") {

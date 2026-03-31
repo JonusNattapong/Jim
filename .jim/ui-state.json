@@ -4,13 +4,14 @@
   ],
   "favoriteModels": [],
   "recentProviders": [
+    "openai-compatible",
     "openai",
-    "auto",
-    "openai-compatible"
+    "auto"
   ],
   "favoriteProviders": [],
   "recentConnections": [
     "kilocode"
   ],
-  "favoriteConnections": []
+  "favoriteConnections": [],
+  "themeId": "sunset"
 }

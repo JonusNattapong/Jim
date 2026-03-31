@@ -11,11 +11,19 @@ interface CheckResult {
 }
 
 async function checkCommand(cmd: string, args: string[], label: string): Promise<CheckResult> {
+  const isWin = process.platform === "win32";
   try {
-    const { stdout } = await execFileAsync(cmd, args, { timeout: 10000 });
+    // Use shell: true on Windows to correctly find .cmd/.bat files in PATH
+    const { stdout } = await execFileAsync(cmd, args, { 
+      timeout: 10000, 
+      shell: isWin 
+    });
     return { name: label, status: "ok", message: `${cmd} available (${stdout.trim().split("\n")[0]})` };
-  } catch {
-    return { name: label, status: "off", message: `${cmd} not found` };
+  } catch (err: any) {
+    if (err.code === "ENOENT") {
+      return { name: label, status: "off", message: `${cmd} not found in PATH` };
+    }
+    return { name: label, status: "warn", message: `${cmd} execution error: ${err.message}` };
   }
 }
 

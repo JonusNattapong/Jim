@@ -11,5 +11,5 @@
       "baseUrl": "https://api.kilo.ai/api/gateway"
     }
   },
-  "selectedPreset": "anthropic"
+  "selectedPreset": "kilocode"
 }

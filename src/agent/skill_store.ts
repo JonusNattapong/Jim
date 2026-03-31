@@ -37,6 +37,7 @@ export class SkillStore {
   }
 
   async saveSkill(skill: Skill): Promise<void> {
+    if (!skill?.name) return;
     const filename = `${skill.name.toLowerCase().replace(/\s+/g, "_")}.json`;
     await writeFile(join(this.skillsDir, filename), JSON.stringify(skill, null, 2), "utf-8");
     this.skills.set(skill.name, skill);

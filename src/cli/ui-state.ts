@@ -8,6 +8,7 @@ export interface CliUiState {
   favoriteProviders: string[];
   recentConnections: string[];
   favoriteConnections: string[];
+  themeId: string;
 }
 
 const DEFAULT_STATE: CliUiState = {
@@ -17,6 +18,7 @@ const DEFAULT_STATE: CliUiState = {
   favoriteProviders: [],
   recentConnections: [],
   favoriteConnections: [],
+  themeId: "sunset",
 };
 
 function getUiStatePath(projectRoot: string): string {
@@ -35,6 +37,7 @@ export function loadCliUiState(projectRoot: string): CliUiState {
       favoriteProviders: raw.favoriteProviders ?? [],
       recentConnections: raw.recentConnections ?? [],
       favoriteConnections: raw.favoriteConnections ?? [],
+      themeId: raw.themeId ?? "sunset",
     };
   } catch {
     return { ...DEFAULT_STATE };

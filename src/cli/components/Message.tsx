@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Text } from "ink";
 import { theme } from "../theme.js";
 import { MarkdownText } from "./MarkdownText.js";
+import { GradientText } from "./GradientText.js";
 
 interface MessageProps {
   role: "user" | "assistant" | "system";
@@ -21,13 +22,17 @@ export const Message: React.FC<MessageProps> = ({ role, content }) => {
   if (role === "assistant") {
     return (
       <Box marginTop={1} flexDirection="row">
-        <Box flexDirection="column" marginRight={1}>
-          <Text color={theme.secondary}>▌</Text>
-          {content.split("\n").slice(1).map((_, i) => (
-            <Text key={i} color={theme.secondary}>▌</Text>
-          ))}
-        </Box>
-        <Box flexDirection="column" flexShrink={1}>
+        <Box 
+          flexDirection="column" 
+          flexShrink={1} 
+          borderStyle="single" 
+          borderColor={theme.secondary} 
+          borderLeft={true} 
+          borderRight={false} 
+          borderTop={false} 
+          borderBottom={false} 
+          paddingLeft={1}
+        >
           <MarkdownText>{content}</MarkdownText>
         </Box>
       </Box>
