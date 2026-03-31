@@ -2,16 +2,15 @@
 
 <img src="assets/logo-github.png" alt="JimCode" width="640" />
 
-JimCode is an open-source, terminal-based agent framework for code understanding and generation. It features a proactive learning loop inspired by Hermes, with built-in tools for file manipulation, shell commands, web access, and more. JimCode supports multiple LLM providers, dynamic tool loading via MCP, and structured workflows for planning and execution. The CLI includes interactive pickers for models and providers, session management, and a plugin catalog. JimCode is designed to be extensible and adaptable to your coding style.
+JimCode is an open-source, terminal-based AI coding agent framework. It features a proactive learning loop inspired by Hermes, with 28+ built-in tools for file manipulation, shell commands, web access, social media, office documents, and more. JimCode supports multiple LLM providers, dynamic tool loading via MCP, and structured workflows for planning and execution.
 
 ## Highlights
 
-- `Proactive learning loop` (Hermes-inspired) for persona and skill mastery
-- `15 built-in tools` plus dynamic MCP tools
+- `28+ built-in tools` plus dynamic MCP tools
 - `Multi-model CLI` with searchable model and provider pickers
 - `Provider selection` with favorites, recents, presets, and native provider setup modals
 - `Work modes` for `architect`, `ask`, and `code`
-- `Task board` via `todo_write` with `blocked`, dependencies, owners, notes, and acceptance criteria
+- `Task board` via `todo_write` with blocked, dependencies, owners, notes, and acceptance criteria
 - `AI-driven choice prompts` via `ask_user_choice`
 - `Plan approval` guardrail before mutation tools run
 - `Sub-agents` with planner/executor/reviewer support
@@ -19,7 +18,15 @@ JimCode is an open-source, terminal-based agent framework for code understanding
 - `Hooks`, `memory`, `MCP`, and `plugin catalog`
 - `User Persona Modeling` persisted under `.jim/user_persona.json`
 - `Self-Improving Skill Store` persisted under `.jim/skills/`
-- `Structured documentation` for learning, security, and contribution
+- `Memory management` with archive, recall, list, and forget operations
+- `Office document tools` for Word, Excel, and PowerPoint
+- `Social media access` for YouTube, Twitter/X, and Reddit
+- `Browser automation` for web interaction
+- `TypeScript checking` with hover info and diagnostics
+- `Knowledge graph` for codebase understanding
+- `UI themes` for terminal customization
+- `YOLO mode` for bypassing safety checks
+- `Ollaman` background task support
 - `Structured logging` with `pino`
 - `Semantic repo map` powered by `ts-morph`
 - `Provider metadata registry` for adapter capabilities, transport, and model recommendations
@@ -68,6 +75,8 @@ export LOG_LEVEL=debug
 - Run shell commands, fetch web docs, and use MCP tools
 - Spawn sub-agents for exploration or delegated work
 - Save sessions and restore checkpoints from the terminal UI
+- Query knowledge graph for codebase understanding
+- Check TypeScript for errors and get hover information
 
 ### Work modes
 
@@ -77,23 +86,74 @@ export LOG_LEVEL=debug
 
 ## Built-in Tools
 
+### File Operations
+
 | Tool               | Purpose                             |
 | ------------------ | ----------------------------------- |
 | `read_file`        | Read files with line numbers        |
 | `edit_file`        | Exact-match file editing            |
 | `write_file`       | Create files or helper scripts      |
 | `list_files`       | Glob-based file discovery           |
+
+### Search & Analysis
+
+| Tool               | Purpose                             |
+| ------------------ | ----------------------------------- |
 | `grep`             | Fast content search with ripgrep    |
-| `run_command`      | Shell execution                     |
-| `git_command`      | Safe git operations                 |
-| `get_project_info` | Project metadata                    |
 | `get_repo_map`     | Semantic repository map             |
+| `get_project_info` | Project metadata                    |
+| `graph_query`      | Knowledge graph queries             |
+| `ts_check`         | TypeScript diagnostics & hover info |
+
+### Execution
+
+| Tool               | Purpose                             |
+| ------------------ | ----------------------------------- |
+| `run_command`      | Shell execution (sandboxed)         |
+| `git_command`      | Safe git operations                 |
+| `browser_action`   | Browser automation                  |
+
+### Task Management
+
+| Tool               | Purpose                             |
+| ------------------ | ----------------------------------- |
 | `todo_write`       | Structured task board               |
 | `ask_user_choice`  | Ask the user to pick an option      |
+| `reflect`          | Self-reflection and reasoning       |
+
+### Web & Internet
+
+| Tool               | Purpose                             |
+| ------------------ | ----------------------------------- |
 | `web_fetch`        | Fetch URL content                   |
 | `web_search`       | Search the web                      |
-| `list_plugins`     | Show built-in and MCP plugin groups |
+| `youtube_transcript` | Extract YouTube video transcripts |
+| `twitter_read`     | Read tweets and threads             |
+| `reddit_read`      | Read Reddit posts and comments      |
+| `social_doctor`    | Diagnose social media tool status   |
+
+### Office Documents
+
+| Tool               | Purpose                             |
+| ------------------ | ----------------------------------- |
+| `office`           | Create/edit .docx, .xlsx, .pptx     |
+| `office_doctor`    | Diagnose OfficeCLI installation     |
+
+### Memory Management
+
+| Tool               | Purpose                             |
+| ------------------ | ----------------------------------- |
+| `memory_archive`   | Store information to memory         |
+| `memory_recall`    | Retrieve information from memory    |
+| `memory_list`      | List memory entries                 |
+| `memory_forget`    | Remove memory entries               |
+
+### Agents & Plugins
+
+| Tool               | Purpose                             |
+| ------------------ | ----------------------------------- |
 | `spawn_agent`      | Delegate to a sub-agent             |
+| `list_plugins`     | Show built-in and MCP plugin groups |
 
 MCP tools are loaded dynamically from `.mcp.json` and appear as additional tool namespaces at runtime.
 
@@ -104,11 +164,12 @@ MCP tools are loaded dynamically from `.mcp.json` and appear as additional tool 
 /approve            Approve the current plan
 /model [name]       Show or switch model
 /models             List models
-/provider [name]    Show or switch auto|openai|openai-compatible
-/providers          Pick a provider adapter (engine type)
-/connect [name]     Connect to a service (Kilocode, OpenRouter, etc.)
-/connections        List all available provider presets
-/mode <mode>        Permission mode (plan/default/acceptEdits/dontAsk)
+/provider [name]    Show or switch current service
+/providers          Pick a provider service (OpenCode, OpenRouter, etc.)
+/adapters           Pick a technical provider adapter (OpenAI, Anthropic, etc.)
+/connect [name]     Connect a service by ID
+/connections        List all available provider services
+/mode <mode>        Permission mode (plan/edit/ask)
 /auto-approve       Toggle auto-approve
 /workmode [name]    Show or switch architect|ask|code
 /modes              Pick a work mode interactively
@@ -122,12 +183,15 @@ MCP tools are loaded dynamically from `.mcp.json` and appear as additional tool 
 /checkpoint <label> Create a checkpoint
 /checkpoints        Browse checkpoints
 /restore <id>       Restore a checkpoint
+/themes             Pick a UI color theme
 /plugins            Browse plugin catalog
 /hooks              Show configured hooks
 /memory             Show loaded memory layers
 /config             Show current config
 /stats              Show usage statistics
 /history            Message stats
+/yolo               Toggle YOLO mode (bypass all safety)
+/ollaman [model]    Toggle Ollaman background tasks
 /help               Show help
 /quit               Exit
 ```
@@ -137,7 +201,7 @@ MCP tools are loaded dynamically from `.mcp.json` and appear as additional tool 
 Jim is built to plan before mutating.
 
 - For complex work, the agent should create a task board with `todo_write`
-- In `plan`, `default`, and `acceptEdits` modes, mutation tools are blocked until the current plan is approved
+- In `plan` and `edit` modes, mutation tools are blocked until the current plan is approved
 - In the UI, you can approve a plan with `/approve`
 
 The task board supports:
@@ -171,6 +235,8 @@ Jim loads project memory from the repo when available:
 - `CLAUDE.local.md`
 - `.claude/rules/*.md`
 - `MEMORY.md`
+
+Jim also provides runtime memory tools for storing and recalling information during conversations.
 
 ## Documentation
 
@@ -238,22 +304,9 @@ At runtime Jim:
 
 ## Models
 
-Jim currently exposes an interactive picker for these models:
+Jim supports multiple models through various providers. Use `/models` to list available models or `/provider` to view current provider details.
 
-- `minimax/minimax-m2.5:free`
-- `minimax/minimax-m2.7`
-- `kilocode/kilocode-frontier`
-- `kilo-auto/balanced`
-- `anthropic/claude-3-5-sonnet-20241022`
-- `anthropic/claude-3-5-haiku-20241022`
-- `openai/gpt-4o`
-- `openai/o1-mini`
-- `google/gemini-1.5-pro`
-- `google/gemini-1.5-flash`
-- `openrouter/google/gemini-pro-1.5`
-- `openrouter/anthropic/claude-3.5-sonnet`
-
-The selected model can also be set with `OPENAI_MODEL`.
+The selected model can be set with `OPENAI_MODEL` or the `/model` command.
 
 Provider selection can be controlled with `API_MODE`:
 
@@ -261,53 +314,64 @@ Provider selection can be controlled with `API_MODE`:
 - `openai`: force the OpenAI Responses API adapter
 - `openai-compatible`: force the OpenAI-compatible Chat Completions adapter
 
-Legacy aliases still work:
+You can also switch provider modes inside the CLI with `/provider`, `/providers`, and `/adapters`.
 
-- `responses` => `openai`
-- `chat-completions` => `openai-compatible`
+## Provider Presets
 
-You can also switch provider modes inside the CLI with `/provider` and `/providers`.
+Jim ships with an extensive provider preset catalog:
 
-Provider connection presets can be controlled with `PROVIDER_PRESET` or the `/connect` command.
+### Popular Providers
 
-The interactive pickers support:
+| Provider | Description |
+|----------|-------------|
+| `opencode-zen` | Curated models including Claude, GPT, Gemini |
+| `opencode-go` | Low cost subscription for everyone |
+| `anthropic` | Direct access to Claude models |
+| `openai` | GPT models for fast, capable AI tasks |
+| `openrouter` | Universal gateway with per-model pricing |
 
-- search-as-you-type filtering
-- grouped `Favorites`, `Recent`, and `All` sections when no search is active
-- `ctrl+f` to toggle favorites
+### Other Providers
 
-The `/connect` flow opens a modal in the TUI and persists provider-specific settings in `.jim/provider.json`.
+| Provider | Description |
+|----------|-------------|
+| `azure-openai` | Enterprise-grade OpenAI on Microsoft Azure |
+| `amazon-bedrock` | AWS-native provider with SigV4 signing |
+| `google` | Gemini models via Vertex AI or Studio |
+| `groq` | Ultra-fast inference for open source models |
+| `mistral` | Mistral and Mixtral models |
+| `xAI` | Grok models via OpenAI-compatible endpoint |
+| `perplexity` | Search-augmented LLM API |
+| `together-ai` | Open source models at high speed |
+| `deepinfra` | Low-cost inference for open models |
+| `cerebras` | Wafer-scale AI inference |
+| `deepseek` | High-performance models like DeepSeek V3 and R1 |
+| `kilocode` | High-speed coding specialized models |
+| `minimax` | MiniMax-m2.5 specialized in short/long context |
+| `moonshot` | Kimi models for long context research |
+| `ollama` | Run models locally on your machine |
 
-Jim ships with an OpenCode-inspired provider preset catalog. It includes the providers documented by OpenCode, and marks each preset as either:
+Use `/connections` to see all available presets and their configuration status.
 
-- `simple`: can be connected directly in Jim with an OpenAI/OpenAI-compatible base URL
-- `catalog-only`: tracked in the preset catalog, but still needs a future native integration in Jim
+## Office Documents
 
-Examples:
+Jim provides tools for creating, reading, and modifying Office documents:
 
-- `PROVIDER_PRESET=openai`
-- `PROVIDER_PRESET=openrouter`
-- `PROVIDER_PRESET=ollama`
-- `PROVIDER_PRESET=lm-studio`
+- Create .docx, .xlsx, .pptx files
+- Add and modify content (text, shapes, slides, cells)
+- Query and validate document structure
+- Batch operations support
 
-Jim now maintains a provider metadata registry internally. Each provider entry includes:
+Requires [OfficeCLI](https://github.com/iOfficeAI/OfficeCLI) installation. Run `office_doctor` to check status.
 
-- transport type
-- endpoint family
-- capability flags like `streaming`, `tools`, `reasoning`, `vision`, and `mcp`
-- recommended model patterns for auto-selection
+## Social Media Access
 
-The CLI uses this registry to:
+Jim can read content from social media platforms:
 
-- recommend the best adapter for the current model
-- enrich `/provider` and `/providers` with capability details
-- keep auto-selection logic and UI labels in sync
+- **YouTube**: Extract video transcripts and metadata
+- **Twitter/X**: Read tweets and threads (requires bird CLI + auth)
+- **Reddit**: Read posts with comments via JSON API
 
-Relevant OpenAI docs:
-
-- Responses API and tools: <https://developers.openai.com/api/docs/guides/tools>
-- Migrating Chat Completions to Responses: <https://developers.openai.com/api/docs/guides/migrate-to-responses>
-- Model endpoint support: <https://developers.openai.com/api/docs/models>
+Run `social_doctor` to check which tools are available on your system.
 
 ## Development
 
