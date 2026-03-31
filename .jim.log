@@ -993,3 +993,11 @@
 {"level":30,"time":1774919988605,"pid":51660,"hostname":"LAPTOP-4HLI40QT","name":"jim","component":"skill-store","skillName":"Office System Health Check","msg":"Skill saved/updated"}
 {"level":30,"time":1774919988605,"pid":51660,"hostname":"LAPTOP-4HLI40QT","name":"jim","component":"consolidation","skillName":"Office System Health Check","msg":"New skill extracted from session."}
 {"level":30,"time":1774919991051,"pid":51660,"hostname":"LAPTOP-4HLI40QT","name":"jim","component":"agent","model":"minimax/minimax-m2.5:free","session":"session-1774919910316-yvo2c6","turns":2,"durationMs":57250,"msg":"run complete"}
+{"level":30,"time":1774922723661,"pid":24192,"hostname":"LAPTOP-4HLI40QT","name":"jim","component":"skill-store","count":5,"msg":"Skills loaded"}
+{"level":30,"time":1774922723671,"pid":24192,"hostname":"LAPTOP-4HLI40QT","name":"jim","component":"agent","model":"minimax/minimax-m2.5:free","session":"session-1774922723643-j04miw","toolCount":0,"msg":"MCP tools re-registered after change"}
+{"level":30,"time":1774922723680,"pid":24192,"hostname":"LAPTOP-4HLI40QT","name":"jim","component":"agent","model":"minimax/minimax-m2.5:free","session":"session-1774922723643-j04miw","mcpServers":[],"msg":"MCP servers loaded"}
+{"level":30,"time":1774922723680,"pid":24192,"hostname":"LAPTOP-4HLI40QT","name":"jim","component":"agent","model":"minimax/minimax-m2.5:free","session":"session-1774922723643-j04miw","memoryLayers":4,"hooksLoaded":1,"toolsRegistered":30,"msg":"agent initialized"}
+{"level":20,"time":1774922727662,"pid":24192,"hostname":"LAPTOP-4HLI40QT","name":"jim","component":"agent","model":"minimax/minimax-m2.5:free","session":"session-1774922723643-j04miw","msgLen":2,"msg":"run start"}
+{"level":30,"time":1774922755184,"pid":24192,"hostname":"LAPTOP-4HLI40QT","name":"jim","component":"consolidation","msg":"Starting session consolidation..."}
+{"level":30,"time":1774922759920,"pid":24192,"hostname":"LAPTOP-4HLI40QT","name":"jim","component":"consolidation","msg":"User persona updated from session."}
+{"level":30,"time":1774922759923,"pid":24192,"hostname":"LAPTOP-4HLI40QT","name":"jim","component":"agent","model":"minimax/minimax-m2.5:free","session":"session-1774922723643-j04miw","turns":1,"durationMs":32261,"msg":"run complete"}

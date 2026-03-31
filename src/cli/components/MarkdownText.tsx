@@ -232,36 +232,27 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
           case "heading": {
             const level = block.level ?? 1;
             if (level === 1) {
-            return (
-              <Box key={i} flexDirection="column" marginTop={1}>
-                <Text bold color={theme.primary}>{block.lines[0]}</Text>
-              </Box>
-            );
-          }
-          if (level === 2) {
+              return (
+                <Box key={i} flexDirection="column" marginTop={1}>
+                  <Text bold color={theme.primary}>{block.lines[0]}</Text>
+                </Box>
+              );
+            }
+            if (level === 2) {
+              return (
+                <Box key={i} marginTop={1}>
+                  <Text bold color={theme.primary}>{block.lines[0]}</Text>
+                </Box>
+              );
+            }
             return (
               <Box key={i} marginTop={1}>
-                <Text bold color={theme.primary}>{block.lines[0]}</Text>
-              </Box>
-            );
-          }
-          return (
-            <Box key={i} marginTop={1}>
-              <Text bold color={theme.accent}>▸ {block.lines[0]}</Text>
+                <Text bold color={theme.accent}>▸ {block.lines[0]}</Text>
               </Box>
             );
           }
 
           case "code": {
-            const width = Math.max(
-              ...block.lines.map(l => l.length),
-              (block.lang || "").length + 4,
-              30
-            );
-            const borderW = Math.min(width + 4, maxWidth - 4);
-            const topBorder = `┌${'─'.repeat(borderW)}┐`;
-            const bottomBorder = `└${'─'.repeat(borderW)}┘`;
-
             const codeStr = block.lines.join("\n");
             let highlighted = codeStr;
             try {
@@ -272,18 +263,25 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
             const highlightedLines = highlighted.split("\n");
 
             return (
-              <Box key={i} flexDirection="column" marginTop={1} marginBottom={1} marginLeft={2}>
+              <Box key={i} flexDirection="column" marginTop={1} marginBottom={1} marginLeft={2} marginRight={2}>
                 {block.lang && (
-                  <Text color={theme.secondary}>  {block.lang}</Text>
-                )}
-                <Text color={theme.border}>{topBorder}</Text>
-                {highlightedLines.map((line, j) => (
-                  <Box key={j}>
-                    <Text color={theme.border}>│ </Text>
-                    <Text>{line}</Text>
+                  <Box marginBottom={0}>
+                    <Text color={theme.secondary}>  {block.lang}</Text>
                   </Box>
-                ))}
-                <Text color={theme.border}>{bottomBorder}</Text>
+                )}
+                <Box
+                  flexDirection="column"
+                  borderStyle="round"
+                  borderColor={theme.border}
+                  paddingX={1}
+                  flexGrow={1}
+                >
+                  {highlightedLines.map((line, j) => (
+                    <Box key={j}>
+                      <Text>{line}</Text>
+                    </Box>
+                  ))}
+                </Box>
               </Box>
             );
           }
@@ -359,7 +357,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children }) => {
                   {headers.map((h, ci) => (
                     <React.Fragment key={ci}>
                       <Text color={theme.border}>│</Text>
-                       <Text bold color={theme.primary}>{padCell(h, colWidths[ci])}</Text>
+                      <Text bold color={theme.primary}>{padCell(h, colWidths[ci])}</Text>
                     </React.Fragment>
                   ))}
                   <Text color={theme.border}>│</Text>
