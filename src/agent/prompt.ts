@@ -37,6 +37,10 @@ function buildToolPromptsSection(): string {
   }
 }
 
+/**
+ * Legacy system prompt builder for backward compatibility
+ * @deprecated Use buildSystemPrompt from src/utils/systemPrompt.ts instead
+ */
 export function buildSystemPrompt(projectRoot: string, workMode: WorkMode = "code", projectInstructions: string = "", situationalFocus: string = ""): string {
   const customSection = projectInstructions 
     ? `\n\n## Project Specific Instructions\n${projectInstructions}`
@@ -151,3 +155,18 @@ Context:
 - Platform: ${process.platform}
 `;
 }
+
+/*
+ * Re-export from new system prompt module for easy migration
+ * These provide ClaudeCode-style prompt engineering with Static/Dynamic boundary
+ */
+export { 
+  createSystemPromptBuilder,
+  buildSystemPrompt as buildEnhancedSystemPrompt,
+  type SystemPromptLayer,
+  type SystemPromptPriority,
+  SystemPromptBuilder,
+} from "../utils/systemPrompt.js";
+
+export type { SystemPromptBuildOptions } from "../constants/prompts.js";
+export type { OutputStyleConfig } from "../constants/outputStyles.js";

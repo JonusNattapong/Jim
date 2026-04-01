@@ -2,8 +2,12 @@ import OpenAI from "openai";
 import type { ChatCompletionMessageParam, ChatCompletionToolMessageParam } from "openai/resources/chat/completions";
 import { ToolRegistry } from "../tools/index.js";
 import { get_repo_map_handler } from "../tools/get_repo_map.js";
-import { buildSystemPrompt } from "./prompt.js";
-import type { WorkMode } from "./prompt.js";
+import { buildSystemPrompt, buildEnhancedSystemPrompt, createSystemPromptBuilder, type WorkMode } from "./prompt.js";
+import { 
+  DEFAULT_AGENT_PROMPT,
+  buildOutputStylePrompt,
+  type OutputStyleConfig,
+} from "../constants/index.js";
 import { ContextManager } from "../context/manager.js";
 import { MemoryManager } from "../context/memory.js";
 import { SessionManager } from "../context/sessions.js";
@@ -97,6 +101,9 @@ export class Agent {
   private compactionBreaker?: AutoCompactionCircuitBreaker;
   private commandQueue?: UnifiedCommandQueue;
   private streamingExecutor?: StreamingToolExecutor;
+  // ClaudeCode-style prompt system
+  private systemPromptBuilder: ReturnType<typeof createSystemPromptBuilder>;
+  private outputStyle: OutputStyleConfig | null = null;
 
   constructor(config: AgentConfig) {
     this.config = config;
@@ -114,6 +121,9 @@ export class Agent {
     this.permissions = new PermissionManager(config.permissionMode ?? "ask", config.projectRoot);
     this.sessionId = this.sessions.generateId();
     this.log = childLogger({ component: "agent", model: config.model, session: this.sessionId });
+
+    // Initialize ClaudeCode-style prompt builder
+    this.systemPromptBuilder = createSystemPromptBuilder(config.model, this.outputStyle);
 
     // Initialize reflexion engine for self-critique
     this.reflexion = new ReflexionEngine(this.provider, config.model);
@@ -147,6 +157,22 @@ export class Agent {
 
   getOllamaBackgroundState() {
     return { enabled: this.config.enableOllamaBackground, model: this.config.ollamaModel || "llama3.1" };
+  }
+
+  /**
+   * Set output style for ClaudeCode-style prompt formatting
+   */
+  setOutputStyle(style: OutputStyleConfig | null): void {
+    this.outputStyle = style;
+    this.systemPromptBuilder.setOutputStyle(style);
+    this.log.info({ style: style?.name ?? "default" }, "Output style updated");
+  }
+
+  /**
+   * Get current output style
+   */
+  getOutputStyle(): OutputStyleConfig | null {
+    return this.outputStyle;
   }
 
   private getBackgroundProvider(): LLMProvider {
@@ -286,17 +312,20 @@ export class Agent {
     }
 
     const memoryContext = this.memory.buildContext();
-    const repoMapStr = this.cachedRepoMap ? `\n\n## Repository Map\n${this.cachedRepoMap}` : "";
+    const repoMapStr = this.cachedRepoMap ? this.cachedRepoMap : "";
     
     // Inject persona and learned skills into the prompt
     const personaContext = this.persona.buildPromptFragment();
     const skillsContext = this.skillStore.buildPromptFragment();
 
-    const systemPrompt = buildSystemPrompt(this.config.projectRoot, this.workMode) + 
-      (memoryContext ? `\n${memoryContext}` : "") + 
-      (personaContext ? `\n${personaContext}` : "") +
-      (skillsContext ? `\n${skillsContext}` : "") +
-      repoMapStr;
+    // Use ClaudeCode-style system prompt builder
+    const systemPrompt = this.systemPromptBuilder.build({
+      memoryContext,
+      personaContext,
+      skillsContext,
+      repoMap: repoMapStr,
+      environmentInfo: `Path: ${this.config.projectRoot}\nPlatform: ${process.platform}`,
+    });
     
     // Auto-compact before adding new message if tokens are high (threshold: 100k)
     if (this.context.estimateTokens() > 100000) {

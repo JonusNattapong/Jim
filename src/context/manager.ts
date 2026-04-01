@@ -1,6 +1,7 @@
 import type { ChatCompletionMessageParam, ChatCompletionToolMessageParam } from "openai/resources/chat/completions";
 import { getTokenCounter } from "./tokens.js";
 import type { TokenCounter } from "./tokens.js";
+import { buildCompactionPrompt, buildPostCompactMessage, formatCompactSummaryForContext } from "../services/compact/index.js";
 
 /** Optional LLM summarizer function type */
 export type SummarizerFn = (messages: ChatCompletionMessageParam[]) => Promise<string>;
@@ -154,9 +155,10 @@ export class ContextManager {
   }
 
   /**
-   * Compact context by summarizing older messages (with metrics tracking).
+   * Compact context using ClaudeCode-style summarization (with metrics tracking).
+   * Uses <analysis> scratchpad and 9-section <summary> format.
    */
-  async compact(): Promise<void> {
+  async compact(useStructuredFormat: boolean = true): Promise<void> {
     if (this.messages.length <= 6) return;
 
     // Circuit breaker (Pillar 21)
@@ -189,9 +191,22 @@ export class ContextManager {
 
     let summary: string = "";
     if (toSummarize.length > 0) {
-      if (this.summarizer) {
+      if (this.summarizer && useStructuredFormat) {
         try {
-          summary = await this.summarizer(toSummarize);
+          // Use ClaudeCode-style structured compaction
+          const compactionPrompt = buildCompactionPrompt();
+          const enhancedMessages: ChatCompletionMessageParam[] = [
+            { role: "system", content: compactionPrompt },
+            ...toSummarize,
+          ];
+          summary = await this.summarizer(enhancedMessages);
+          
+          // Strip <analysis> block if present, keep only <summary>
+          const summaryMatch = summary.match(/<summary>([\s\S]*?)<\/summary>/);
+          if (summaryMatch) {
+            summary = summaryMatch[1].trim();
+          }
+          
           this.consecutiveCompactionFailures = 0;
         } catch (error) {
           console.error("[ContextManager] LLM summarizer failed:", error);
@@ -205,8 +220,13 @@ export class ContextManager {
       summary = "Initial context preserved.";
     }
 
+    // Add post-compact message for seamless continuation
+    const postCompactMessage = buildPostCompactMessage(true);
+    const formattedSummary = formatCompactSummaryForContext(summary);
+
     this.messages = [
-      { role: "user", content: `[Previous conversation summary]\n${summary}\n\n[Continue from here]` },
+      { role: "system", content: postCompactMessage },
+      { role: "user", content: formattedSummary },
       ...preservedPinned,
       ...recent,
     ];

@@ -51,50 +51,56 @@ pnpm smoke:exit
 
 **1. Agent Runtime** (`src/agent/`)
 - `loop.ts`: Main agent execution loop, orchestrates tool calls and LLM interactions
+- `prompt.ts`: System prompt builder (legacy + enhanced ClaudeCode-style)
 - `provider.ts`: LLM provider abstraction supporting OpenAI, Anthropic, and 15+ providers
 - `subagent.ts`: Sub-agent spawning for parallel task execution
 - `swarm.ts`: Multi-agent swarm orchestration for complex workflows
 - `reflexion.ts`: Self-reflection and learning engine
 - `hooks.ts`: Lifecycle hook system for automation
 
-**2. Tool System** (`src/tools/`)
+**2. Prompt Engineering System** (`src/constants/`, `src/utils/systemPrompt.ts`)
+- `prompts.ts`: ClaudeCode-style system prompt sections (Static/Dynamic boundary)
+- `outputStyles.ts`: Output style configurations (explanatory, learning, concise, etc.)
+- `systemPrompt.ts`: System prompt builder with cache boundary support
+
+**3. Context Management** (`src/context/`)
+- `manager.ts`: Context window and token management with ClaudeCode-style compaction
+- `memory.ts`: Long-term memory storage and retrieval
+- `sessions.ts`: Session persistence under `~/.jim/sessions`
+- `persona.ts`: User persona learning and adaptation
+- `memory-store.ts`: Archival memory for long-term storage
+
+**4. Tool System** (`src/tools/`)
 - `registry.ts`: Central tool registry with plugin management
 - `types.ts`: Tool definition and handler type interfaces
 - Each tool exports a `*_definition` (schema) and `*_handler` (implementation)
 - Built-in plugins: `file-ops`, `system`, `search`, `social`, `office`, `memory`, `agent-intelligence`
 
-**3. CLI Interface** (`src/cli/`)
+**5. CLI Interface** (`src/cli/`)
 - `index.tsx`: Entry point using Ink/React TUI
 - `app.tsx`: Main application component
 - `components/`: UI components (Header, Chat, ToolResult, etc.)
 - `hooks/`: React hooks for virtual scrolling, prompt history
 - `stores/`: State management for tasks, sessions, prompt history
 
-**4. Context Management** (`src/context/`)
-- `manager.ts`: Context window and token management
-- `memory.ts`: Long-term memory storage and retrieval
-- `sessions.ts`: Session persistence under `~/.jim/sessions`
-- `persona.ts`: User persona learning and adaptation
-- `memory-store.ts`: Archival memory for long-term storage
-
-**5. Permissions & Security** (`src/permissions/`)
+**6. Permissions & Security** (`src/permissions/`)
 - `manager.ts`: Permission modes (ask/default/acceptEdits/dontAsk)
 - `rule-engine.ts`: Permission rule evaluation
 - `security-policy.ts`: Security policies and guardrails
 
-**6. Knowledge Graph** (`src/graph/`)
+**7. Knowledge Graph** (`src/graph/`)
 - `knowledge-graph.ts`: Codebase understanding via ts-morph
 - `ast-extractor.ts`: AST parsing for TypeScript projects
 - `cache.ts`: Graph caching for performance
 
-**7. Configuration** (`src/config/`)
+**8. Configuration** (`src/config/`)
 - `provider-presets.ts`: 20+ provider presets (OpenAI, Anthropic, Azure, etc.)
 - `provider-store.ts`: Provider settings persistence
 - `schemas.ts`: TypeBox validation schemas
 
-**8. Services** (`src/services/`)
+**9. Services** (`src/services/`)
 - `pending-messages.ts`: Async message queue (Mailbox)
-- `context-compaction.ts`: Context window compaction
+- `compact/prompt.ts`: Context compaction prompts (ClaudeCode-style)
 - `session-memory.ts`: Session memory management
 - `lsp/`: Language server protocol integration
 
@@ -131,6 +137,100 @@ Provider selection flow:
 2. Resolve preset via `resolveProviderPreset()`
 3. Apply environment assignments from preset
 4. Create provider via `createProvider()` with mode (`auto`/`openai`/`openai-compatible`)
+
+## ClaudeCode-Style Prompt Engineering
+
+Jim implements advanced prompt engineering techniques inspired by ClaudeCode:
+
+### 1. System Prompt Structure (Static/Dynamic Boundary)
+
+```
+┌─────────────────────────────────────────┐
+│ STATIC (cached across session)          │
+│ ┌───────────────────────────────────┐   │
+│ │ 1. Identity Section               │   │
+│ │ 2. Cyber Risk Instructions        │   │
+│ │ 3. Tool Usage Rules               │   │
+│ │ 4. Output Efficiency Rules        │   │
+│ │ 5. Code Style Rules               │   │
+│ └───────────────────────────────────┘   │
+├─────────────────────────────────────────┤
+│ __SYSTEM_PROMPT_DYNAMIC_BOUNDARY__      │ ← Cache boundary
+├─────────────────────────────────────────┤
+│ DYNAMIC (changes per turn)              │
+│ ┌───────────────────────────────────┐   │
+│ │ - Memory context                  │   │
+│ │ - User persona                    │   │
+│ │ - Skills context                  │   │
+│ │ - Repository map                  │   │
+│ │ - Environment info                │   │
+│ └───────────────────────────────────┘   │
+└─────────────────────────────────────────┘
+```
+
+**Implementation**: `src/utils/systemPrompt.ts` - `SystemPromptBuilder` class
+
+### 2. Context Compaction (9-Section Summary)
+
+When context fills up, Jim uses structured summarization with:
+- `<analysis>` block (scratchpad for model reasoning)
+- `<summary>` block with 9 sections:
+  1. Primary Request and Intent
+  2. Key Technical Concepts
+  3. Files and Code Sections
+  4. Errors and Fixes
+  5. Problem Solving Approach
+  6. All User Messages
+  7. Pending Tasks
+  8. Current Work
+  9. Optional Next Step
+
+**Implementation**: `src/services/compact/prompt.ts`
+
+### 3. Output Styles
+
+Jim supports multiple output personalities:
+
+- **explanatory**: Educational explanations with insight blocks
+- **learning**: Hands-on practice with human contributions
+- **concise**: Minimal output, just essentials
+- **detailed**: Comprehensive with full context
+- **teacher**: Socratic questioning approach
+- **reviewer**: Code review style with [ISSUE]/[PRAISE]/[SUGGESTION] tags
+- **architect**: High-level system design focus
+- **debugger**: Systematic troubleshooting format
+
+**Usage**: `agent.setOutputStyle(getOutputStyle("explanatory"))`
+
+**Implementation**: `src/constants/outputStyles.ts`
+
+### 4. Key Prompt Engineering Rules
+
+From `src/constants/prompts.ts`:
+
+**Tool Usage Rules**:
+- Do NOT use BashTool when dedicated tools exist
+- Use parallel tool calls for independent operations
+- Reserve bash for npm install, build scripts, operations with no equivalent tool
+
+**Output Efficiency**:
+- Go straight to the point
+- Try simplest approach first
+- Lead with answer, not reasoning
+- Skip filler words and preamble
+- Don't restate what user said — just do it
+
+**Code Style Rules**:
+- Don't add features beyond what was asked
+- No premature abstractions
+- Default to NO comments (only when WHY is non-obvious)
+- Don't explain WHAT code does (identifiers should)
+
+**False Claims Mitigation**:
+- Report outcomes faithfully
+- Never claim "all tests pass" when they fail
+- Never suppress failing checks
+- Don't hedge confirmed results
 
 ## Code Style Guidelines
 
@@ -208,10 +308,15 @@ export const my_tool_handler: ToolHandler = async (args) => {
 
 - **`src/cli/index.tsx`**: CLI entry point (Ink/React TUI)
 - **`src/agent/loop.ts`**: Central agent orchestration
+- **`src/agent/prompt.ts`**: System prompt builder (legacy + enhanced)
+- **`src/utils/systemPrompt.ts`**: ClaudeCode-style prompt builder
+- **`src/constants/prompts.ts`**: System prompt sections
+- **`src/constants/outputStyles.ts`**: Output style definitions
 - **`src/agent/provider.ts`**: LLM provider abstraction
 - **`src/tools/registry.ts`**: Tool registration and management
 - **`src/tools/index.ts`**: Tool exports barrel file
 - **`src/context/manager.ts`**: Context and token management
+- **`src/services/compact/prompt.ts`**: Context compaction prompts
 
 ## Configuration Files
 

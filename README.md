@@ -1,6 +1,5 @@
 # JimCode
 
-<img src="assets/logo-github.png" alt="JimCode" width="640" />
 <img src="assets/interface.png" alt="Jim Interface" width="640" />
 
 JimCode is an open-source, terminal-based AI coding agent framework. It features a proactive learning loop inspired by Hermes, with 28+ built-in tools for file manipulation, shell commands, web access, social media, office documents, and more. JimCode supports multiple LLM providers, dynamic tool loading via MCP, and structured workflows for planning and execution.
