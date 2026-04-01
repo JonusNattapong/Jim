@@ -1,48 +1,129 @@
+/**
+ * Progress Bar Component
+ * Shows a progress bar in the CLI
+ */
+
 import React from "react";
 import { Box, Text } from "ink";
 
 interface ProgressBarProps {
-  label: string;
-  percent: number;
+  current: number;
+  total: number;
   width?: number;
+  showPercentage?: boolean;
+  showNumbers?: boolean;
+  label?: string;
   color?: string;
 }
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({ 
-  label, 
-  percent, 
-  width = 30, 
-  color = "cyan" 
-}) => {
-  const filledWidth = Math.floor((percent / 100) * width);
-  const bar = [];
-  for (let i = 0; i < width; i++) {
-    if (i < filledWidth) {
-      // Premium gradient effect: Cyan to Blue to Magenta
-      let charColor = color;
-      if (i > (width * 0.7)) charColor = "magenta";
-      else if (i > (width * 0.4)) charColor = "blue";
-      
-      bar.push(<Text key={i} color={charColor}>█</Text>);
-    } else {
-      bar.push(<Text key={i} color="gray">░</Text>);
-    }
-  }
+export function ProgressBar({
+  current,
+  total,
+  width = 30,
+  showPercentage = true,
+  showNumbers = false,
+  label,
+  color = "cyan",
+}: ProgressBarProps) {
+  const percentage = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+  const filled = Math.round((percentage / 100) * width);
+  const empty = width - filled;
+
+  const bar = "█".repeat(filled) + "░".repeat(empty);
 
   return (
-    <Box flexDirection="column" marginY={1}>
-      <Box justifyContent="space-between">
-        <Box>
-          <Text color="yellow">⚡ </Text>
-          <Text color={color} bold>{label.toUpperCase()}</Text>
+    <Box flexDirection="column">
+      {label && (
+        <Box marginBottom={1}>
+          <Text bold>{label}</Text>
         </Box>
-        <Text color={color} bold>{Math.floor(percent)}%</Text>
-      </Box>
+      )}
       <Box>
-        <Text color="gray">[</Text>
-        {bar}
-        <Text color="gray">]</Text>
+        <Text color={color as any}>[{bar}]</Text>
+        {showPercentage && (
+          <Box marginLeft={1}>
+            <Text color={color as any}>{percentage}%</Text>
+          </Box>
+        )}
+        {showNumbers && (
+          <Box marginLeft={1}>
+            <Text dimColor>
+              ({current}/{total})
+            </Text>
+          </Box>
+        )}
       </Box>
     </Box>
   );
+}
+
+/**
+ * Spinner Component
+ * Shows an animated spinner in the CLI
+ */
+
+interface SpinnerProps {
+  text?: string;
+  type?: "dots" | "line" | "circle" | "braille";
+}
+
+const spinnerFrames: Record<string, string[]> = {
+  dots: ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
+  line: ["-", "\\", "|", "/"],
+  circle: ["◐", "◓", "◑", "◒"],
+  braille: ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"],
 };
+
+export function Spinner({ text = "Loading...", type = "dots" }: SpinnerProps) {
+  const [frame, setFrame] = React.useState(0);
+  const frames = spinnerFrames[type] || spinnerFrames.dots;
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setFrame((prev) => (prev + 1) % frames.length);
+    }, 80);
+    return () => clearInterval(timer);
+  }, [frames.length]);
+
+  return (
+    <Box>
+      <Text color="cyan">{frames[frame]}</Text>
+      {text && (
+        <Box marginLeft={1}>
+          <Text>{text}</Text>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+/**
+ * Loading State Component
+ * Shows a loading state with spinner and optional progress
+ */
+
+interface LoadingStateProps {
+  text?: string;
+  progress?: {
+    current: number;
+    total: number;
+  };
+}
+
+export function LoadingState({ text = "Loading...", progress }: LoadingStateProps) {
+  return (
+    <Box flexDirection="column">
+      <Spinner text={text} />
+      {progress && (
+        <Box marginTop={1}>
+          <ProgressBar
+            current={progress.current}
+            total={progress.total}
+            showPercentage
+            showNumbers
+          />
+        </Box>
+      )}
+    </Box>
+  );
+}

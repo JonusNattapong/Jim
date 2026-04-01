@@ -523,6 +523,23 @@ export function createCommandRegistry(): CommandRegistry {
     },
   });
 
+  // ─── Bridge Commands ───────────────────────────────
+  registry.register({
+    name: "bridge",
+    description: "Manage remote bridge server for mobile access",
+    usage: "/bridge [start|stop|status|config]",
+    category: CommandCategory.DevTools,
+    handler: async (args) => {
+      const { handleBridgeCommand } = await import("./bridge/bridge.js");
+      const result = await handleBridgeCommand({
+        args,
+        command: "bridge",
+        input: "/bridge " + args.join(" "),
+      });
+      return result.value as string;
+    },
+  });
+
   // ─── Permissions Commands ─────────────────────────────
   registry.register({
     name: "permissions",
@@ -1479,6 +1496,54 @@ export function createCommandRegistry(): CommandRegistry {
         return `📊 **Git Status**\n\n${status}`;
       } catch (err: any) {
         return `❌ Failed: ${err.message}`;
+      }
+    },
+  });
+
+  // ─── Cost Tracking Commands ───────────────────────────
+  registry.register({
+    name: "cost",
+    description: "Display current session cost tracking and budget",
+    usage: "/cost [reset|set-budget <amount>]",
+    category: CommandCategory.Stats,
+    handler: async (args) => {
+      const { getCostTracker, resetCostTracker } = await import("../coordinator/cost-tracker.js");
+      const tracker = getCostTracker();
+      const command = args[0] || "show";
+
+      if (command === "reset") {
+        resetCostTracker();
+        return "✅ Cost tracker has been reset";
+      }
+
+      if (command === "set-budget") {
+        const amount = parseFloat(args[1] || "0");
+        if (isNaN(amount) || amount <= 0) {
+          return "❌ Invalid budget amount. Usage: /cost set-budget <amount>";
+        }
+        tracker.setBudget(amount);
+        return `✅ Budget set to $${amount.toFixed(2)}`;
+      }
+
+      return tracker.getSummary();
+    },
+  });
+
+  // ─── Health Check Commands ────────────────────────────
+  registry.register({
+    name: "health",
+    description: "Run project health diagnostics",
+    usage: "/health",
+    category: CommandCategory.DevTools,
+    handler: async () => {
+      const { runHealthCheck, formatHealthCheck } = await import("../services/project-health.js");
+      const { cwd } = await import("process");
+      try {
+        const projectPath = cwd();
+        const { results } = await runHealthCheck(projectPath);
+        return formatHealthCheck(results);
+      } catch (err: any) {
+        return `❌ Health check failed: ${err.message}`;
       }
     },
   });

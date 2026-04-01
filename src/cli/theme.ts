@@ -1,157 +1,210 @@
 /**
- * Curated color themes for the JimCode CLI.
+ * Theme System with ThemeProvider/useTheme hook
+ * Inspired by Claude Code's design system
  */
 
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+
+// Theme definitions
 export interface Theme {
-  id: string;
-  label: string;
+  // Colors
   primary: string;
-  primaryBright: string;
   secondary: string;
-  secondaryDark: string;
   success: string;
-  warning: string;
   error: string;
+  warning: string;
   info: string;
-  accent: string;
+  
+  // Text colors
   text: string;
   textBright: string;
   textMuted: string;
   inverse: string;
+  
+  // Background colors
+  background: string;
+  backgroundAlt: string;
+  
+  // Border colors
   border: string;
-  borderAccent: string;
-  diffAddBg: string;
-  diffAddFg: string;
-  diffRemBg: string;
-  diffRemFg: string;
+  borderBright: string;
+  
+  // Diff colors
+  diffAdded: string;
+  diffRemoved: string;
+  diffAddedWord: string;
+  diffRemovedWord: string;
+  diffAddedDimmed: string;
+  diffRemovedDimmed: string;
+  
+  // Spinner colors
+  spinnerPrimary: string;
+  spinnerSecondary: string;
+  spinnerSuccess: string;
+  spinnerError: string;
+  spinnerWarning: string;
 }
 
-export const THEME_LIST: Theme[] = [
-  {
-    id: "sunset",
-    label: "Sunset Orange (Premium)",
-    primary: "#FF914D",
-    primaryBright: "#FFB085",
-    secondary: "#EAEAEA",
-    secondaryDark: "#A0A0A0",
-    success: "#81C784",
-    warning: "#FFD54F",
-    error: "#E57373",
-    info: "#64B5F6",
-    accent: "#FF7043",
-    text: "#F5F5F5",
-    textBright: "#FFFFFF",
-    textMuted: "#BDBDBD",
-    inverse: "#1A1A1A",
-    border: "#333333",
-    borderAccent: "#FF914D",
-    diffAddBg: "#2E7D32",
-    diffAddFg: "#FFFFFF",
-    diffRemBg: "#C62828",
-    diffRemFg: "#FFFFFF",
+// Theme presets
+export const themes: Record<string, Theme> = {
+  default: {
+    // Colors
+    primary: "#6366f1", // Indigo
+    secondary: "#8b5cf6", // Violet
+    success: "#10b981", // Emerald
+    error: "#ef4444", // Red
+    warning: "#f59e0b", // Amber
+    info: "#3b82f6", // Blue
+    
+    // Text colors
+    text: "#f8fafc", // Slate 50
+    textBright: "#ffffff",
+    textMuted: "#94a3b8", // Slate 400
+    inverse: "#0f172a", // Slate 900
+    
+    // Background colors
+    background: "#0f172a", // Slate 900
+    backgroundAlt: "#1e293b", // Slate 800
+    
+    // Border colors
+    border: "#334155", // Slate 700
+    borderBright: "#475569", // Slate 600
+    
+    // Diff colors
+    diffAdded: "#166534", // Green 800
+    diffRemoved: "#991b1b", // Red 800
+    diffAddedWord: "#4ade80", // Green 400
+    diffRemovedWord: "#f87171", // Red 400
+    diffAddedDimmed: "#14532d", // Green 900
+    diffRemovedDimmed: "#7f1d1d", // Red 900
+    
+    // Spinner colors
+    spinnerPrimary: "#6366f1", // Indigo
+    spinnerSecondary: "#8b5cf6", // Violet
+    spinnerSuccess: "#10b981", // Emerald
+    spinnerError: "#ef4444", // Red
+    spinnerWarning: "#f59e0b", // Amber
   },
-  {
-    id: "nord",
-    label: "Nord (Classic)",
-    primary: "#88C0D0",
-    primaryBright: "#8FBCBB",
-    secondary: "#ECEFF4",
-    secondaryDark: "#D8DEE9",
-    success: "#A3BE8C",
-    warning: "#EBCB8B",
-    error: "#BF616A",
-    info: "#81A1C1",
-    accent: "#B48EAD",
-    text: "#D8DEE9",
-    textBright: "#E5E9F0",
-    textMuted: "#4C566A",
-    inverse: "#2E3440",
-    border: "#3B4252",
-    borderAccent: "#88C0D0",
-    diffAddBg: "#3B4252",
-    diffAddFg: "#A3BE8C",
-    diffRemBg: "#3B4252",
-    diffRemFg: "#BF616A",
+  
+  light: {
+    // Colors
+    primary: "#4f46e5", // Indigo 600
+    secondary: "#7c3aed", // Violet 600
+    success: "#059669", // Emerald 600
+    error: "#dc2626", // Red 600
+    warning: "#d97706", // Amber 600
+    info: "#2563eb", // Blue 600
+    
+    // Text colors
+    text: "#0f172a", // Slate 900
+    textBright: "#000000",
+    textMuted: "#64748b", // Slate 500
+    inverse: "#f8fafc", // Slate 50
+    
+    // Background colors
+    background: "#ffffff",
+    backgroundAlt: "#f8fafc", // Slate 50
+    
+    // Border colors
+    border: "#e2e8f0", // Slate 200
+    borderBright: "#cbd5e1", // Slate 300
+    
+    // Diff colors
+    diffAdded: "#dcfce7", // Green 100
+    diffRemoved: "#fee2e2", // Red 100
+    diffAddedWord: "#16a34a", // Green 600
+    diffRemovedWord: "#dc2626", // Red 600
+    diffAddedDimmed: "#f0fdf4", // Green 50
+    diffRemovedDimmed: "#fef2f2", // Red 50
+    
+    // Spinner colors
+    spinnerPrimary: "#4f46e5", // Indigo 600
+    spinnerSecondary: "#7c3aed", // Violet 600
+    spinnerSuccess: "#059669", // Emerald 600
+    spinnerError: "#dc2626", // Red 600
+    spinnerWarning: "#d97706", // Amber 600
   },
-  {
-    id: "matrix",
-    label: "Matrix (Hacker)",
-    primary: "#00FF41",
-    primaryBright: "#00FF00",
-    secondary: "#0D0208",
-    secondaryDark: "#003B00",
-    success: "#008F11",
-    warning: "#FFFB00",
-    error: "#FF0000",
-    info: "#00FF41",
-    accent: "#00FF41",
-    text: "#00FF41",
-    textBright: "#FFFFFF",
-    textMuted: "#003B00",
-    inverse: "#000000",
-    border: "#003B00",
-    borderAccent: "#00FF41",
-    diffAddBg: "#003B00",
-    diffAddFg: "#00FF41",
-    diffRemBg: "#3B0000",
-    diffRemFg: "#FF0000",
-  },
-  {
-    id: "cyberpunk",
-    label: "Cyberpunk (Neon)",
-    primary: "#F300FF",
-    primaryBright: "#FF00E5",
-    secondary: "#00FFD1",
-    secondaryDark: "#009B80",
-    success: "#00FFD1",
-    warning: "#FFFF00",
-    error: "#FF003C",
-    info: "#00FFD1",
-    accent: "#FF003C",
-    text: "#FFFFFF",
-    textBright: "#FFFFFF",
-    textMuted: "#66006B",
-    inverse: "#000000",
-    border: "#330036",
-    borderAccent: "#F300FF",
-    diffAddBg: "#00332A",
-    diffAddFg: "#00FFD1",
-    diffRemBg: "#33000C",
-    diffRemFg: "#FF003C",
-  },
-  {
-    id: "midnight",
-    label: "Midnight (Deep)",
-    primary: "#7C4DFF",
-    primaryBright: "#B388FF",
-    secondary: "#FFFFFF",
-    secondaryDark: "#B0BEC5",
-    success: "#00E676",
-    warning: "#FFD600",
-    error: "#FF1744",
-    info: "#00B0FF",
-    accent: "#FF4081",
-    text: "#ECEFF1",
-    textBright: "#FFFFFF",
-    textMuted: "#546E7A",
-    inverse: "#121212",
-    border: "#263238",
-    borderAccent: "#7C4DFF",
-    diffAddBg: "#1B5E20",
-    diffAddFg: "#FFFFFF",
-    diffRemBg: "#B71C1C",
-    diffRemFg: "#FFFFFF",
-  }
-];
+};
 
-export const DEFAULT_THEME_ID = "sunset";
-
-// Fallback theme object to avoid breaking existing imports
-export const theme: Theme = { ...(THEME_LIST.find(t => t.id === DEFAULT_THEME_ID) || THEME_LIST[0]) };
-
-export function setTheme(themeId: string) {
-  const found = THEME_LIST.find(t => t.id === themeId);
-  if (found) {
-    Object.assign(theme, found);
-  }
+// Theme context
+interface ThemeContextType {
+  theme: Theme;
+  themeName: string;
+  setTheme: (name: string) => void;
 }
+
+const ThemeContext = createContext<ThemeContextType>({
+  theme: themes.default,
+  themeName: "default",
+  setTheme: () => {},
+});
+
+// Theme provider component
+interface ThemeProviderProps {
+  children: ReactNode;
+  initialTheme?: string;
+}
+
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({ 
+  children, 
+  initialTheme = "default" 
+}) => {
+  const [themeName, setThemeName] = useState(initialTheme);
+  const theme = themes[themeName] || themes.default;
+  
+  const setTheme = (name: string) => {
+    if (themes[name]) {
+      setThemeName(name);
+    }
+  };
+  
+  return (
+    <ThemeContext.Provider value={{ theme, themeName, setTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+// useTheme hook
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error("useTheme must be used within a ThemeProvider");
+  }
+  return context;
+};
+
+// useThemeValue hook for accessing specific theme values
+export const useThemeValue = <K extends keyof Theme>(key: K): Theme[K] => {
+  const { theme } = useTheme();
+  return theme[key];
+};
+
+// useThemeColor hook for accessing color values
+export const useThemeColor = (colorKey: keyof Theme): string => {
+  const { theme } = useTheme();
+  return theme[colorKey] as string;
+};
+
+// useThemeMode hook for light/dark mode switching
+export const useThemeMode = () => {
+  const { themeName, setTheme } = useTheme();
+  
+  const toggleMode = () => {
+    setTheme(themeName === "default" ? "light" : "default");
+  };
+  
+  const setLightMode = () => setTheme("light");
+  const setDarkMode = () => setTheme("default");
+  
+  return {
+    isDarkMode: themeName === "default",
+    isLightMode: themeName === "light",
+    toggleMode,
+    setLightMode,
+    setDarkMode,
+  };
+};
+
+// Legacy export for backward compatibility
+export const theme = themes.default;

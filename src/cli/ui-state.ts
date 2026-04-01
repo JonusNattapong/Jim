@@ -11,6 +11,7 @@ export interface CliUiState {
   promptHistory: string[];
   themeId: string;
   showHeader: boolean;
+  isOutputExpanded: boolean;
 }
 
 const DEFAULT_STATE: CliUiState = {
@@ -23,6 +24,7 @@ const DEFAULT_STATE: CliUiState = {
   promptHistory: [],
   themeId: "sunset",
   showHeader: true,
+  isOutputExpanded: false,
 };
 
 function getUiStatePath(projectRoot: string): string {
@@ -44,6 +46,7 @@ export function loadCliUiState(projectRoot: string): CliUiState {
       promptHistory: raw.promptHistory ?? [],
       themeId: raw.themeId ?? "sunset",
       showHeader: raw.showHeader ?? true,
+      isOutputExpanded: raw.isOutputExpanded ?? false,
     };
   } catch {
     return { ...DEFAULT_STATE };

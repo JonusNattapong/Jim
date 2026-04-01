@@ -1,6 +1,106 @@
 import type { ToolDefinition, ToolHandler } from "./types.js";
 
 /**
+ * Preapproved hosts for web fetching (code-related domains)
+ * These domains don't require additional permission checks
+ */
+const PREAPPROVED_HOSTS = new Set([
+  // Documentation
+  'docs.python.org',
+  'docs.oracle.com',
+  'learn.microsoft.com',
+  'developer.mozilla.org',
+  'go.dev',
+  'pkg.go.dev',
+  'docs.swift.org',
+  'ruby-doc.org',
+  'doc.rust-lang.org',
+  'www.typescriptlang.org',
+  'docs.djangoproject.com',
+  'flask.palletsprojects.com',
+  'nodejs.org',
+  'bun.sh',
+  // Frameworks
+  'react.dev',
+  'angular.io',
+  'vuejs.org',
+  'nextjs.org',
+  'expressjs.com',
+  'tailwindcss.com',
+  'redux.js.org',
+  'webpack.js.org',
+  'jestjs.io',
+  'reactrouter.com',
+  // GitHub (code)
+  'github.com',
+  'raw.githubusercontent.com',
+  // APIs & Tools
+  'api.github.com',
+  'api.anthropic.com',
+  'modelcontextprotocol.io',
+]);
+
+/**
+ * URLs that likely need authentication (should warn before fetching)
+ */
+const AUTHENTICATED_URL_PATTERNS = [
+  /docs\.google\.com/i,
+  /confluence\./i,
+  /jira\./i,
+  /monday\.com/i,
+  /notion\.so/i,
+  /asana\.com/i,
+  /app\.slack\.com/i,
+  /github\.com\/[^/]+\/[^/]+\/pull/i,  // GitHub PRs
+  /github\.com\/[^/]+\/[^/]+\/issues/i, // GitHub issues
+];
+
+/**
+ * Check if URL is preapproved
+ */
+function isPreapprovedHost(url: string): boolean {
+  try {
+    const parsedUrl = new URL(url);
+    return PREAPPROVED_HOSTS.has(parsedUrl.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if URL likely requires authentication
+ */
+function likelyRequiresAuth(url: string): boolean {
+  return AUTHENTICATED_URL_PATTERNS.some(pattern => pattern.test(url));
+}
+
+/**
+ * URL validation constants
+ */
+const MAX_URL_LENGTH = 2000;
+const MAX_HTTP_CONTENT_LENGTH = 10 * 1024 * 1024; // 10MB
+const MAX_REDIRECTS = 10;
+
+/**
+ * Validate URL before fetching
+ */
+function validateURL(url: string): { valid: boolean; error?: string } {
+  if (!url) return { valid: false, error: 'URL cannot be empty' };
+  if (url.length > MAX_URL_LENGTH) {
+    return { valid: false, error: `URL exceeds ${MAX_URL_LENGTH} character limit` };
+  }
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    return { valid: false, error: 'Only http:// and https:// URLs are allowed' };
+  }
+  try {
+    new URL(url);
+    return { valid: true };
+  } catch {
+    return { valid: false, error: 'Invalid URL format' };
+  }
+}
+
+/**
  * Firecrawl API integration for clean Markdown scraping.
  * Uses FIRECRAWL_API_KEY env var.
  * Falls back to simple fetch if no key or error.
@@ -122,8 +222,10 @@ export const web_fetch_definition: ToolDefinition = {
     name: "web_fetch",
     description:
       "Fetch content from a URL and return as clean Markdown. " +
-      "Tries multiple AI-powered scrapers (Jina AI first - free, then Firecrawl if API key set), " +
-      "falls back to simple HTML stripping. Perfect for docs, GitHub, blogs.",
+      "Tries multiple AI-powered scrapers (Jina AI first - free, then Firecrawl if API key set). " +
+      "Falls back to simple HTML stripping. Perfect for docs, GitHub, blogs. " +
+      "WARNING: Will FAIL for authenticated URLs (Google Docs, Confluence, Jira, GitHub private repos). " +
+      "For authenticated access, look for specialized MCP tools.",
     parameters: {
       type: "object",
       properties: {
@@ -144,12 +246,27 @@ export const web_fetch_definition: ToolDefinition = {
 export const web_fetch_handler: ToolHandler = async (args) => {
   const url = args.url as string;
   const maxChars = (args.max_chars as number) ?? 15000;
-
   const userSignal = (args as any).__abortSignal as AbortSignal | undefined;
 
-  // Safety: only allow http/https
-  if (!url.startsWith("http://") && !url.startsWith("https://")) {
-    return { content: "Error: Only http:// and https:// URLs are allowed", isError: true };
+  // Validate URL
+  const validation = validateURL(url);
+  if (!validation.valid) {
+    return {
+      content: `URL validation failed: ${validation.error}. Error code: INVALID_URL`,
+      isError: true,
+    };
+  }
+
+  // Warn about authenticated URLs
+  if (likelyRequiresAuth(url)) {
+    return {
+      content:
+        `IMPORTANT: This URL likely requires authentication (Google Docs, Confluence, Jira, GitHub private, etc.). ` +
+        `This tool cannot access authenticated content. ` +
+        `Look for a specialized MCP tool that provides authenticated access to this service. ` +
+        `Error code: AUTHENTICATED_URL_DETECTED`,
+      isError: true,
+    };
   }
 
   // Try Firecrawl first (premium AI scraping to clean Markdown)

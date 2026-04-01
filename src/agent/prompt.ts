@@ -12,6 +12,31 @@ function modeInstructions(mode: WorkMode): string {
   }
 }
 
+/**
+ * Build enhanced tool prompts section from tool-specific guidance
+ */
+function buildToolPromptsSection(): string {
+  try {
+    // Import and use tool prompts to enhance system guidance
+    const { TOOL_PROMPTS } = require("../tools/prompts/tool-prompts.js") as typeof import("../tools/prompts/tool-prompts.js");
+    
+    const toolsToHighlight = ["run_command", "grep", "read_file", "edit_file", "ts_check"];
+    let section = "## Tool-Specific Guidance\n\n";
+    
+    for (const toolName of toolsToHighlight) {
+      const toolPrompt = TOOL_PROMPTS[toolName as keyof typeof TOOL_PROMPTS];
+      if (toolPrompt) {
+        section += `### ${toolPrompt.name}\n${toolPrompt.systemPrompt}\n\n`;
+      }
+    }
+    
+    return section;
+  } catch {
+    // Graceful fallback if tool prompts can't be loaded
+    return "";
+  }
+}
+
 export function buildSystemPrompt(projectRoot: string, workMode: WorkMode = "code", projectInstructions: string = "", situationalFocus: string = ""): string {
   const customSection = projectInstructions 
     ? `\n\n## Project Specific Instructions\n${projectInstructions}`
@@ -20,6 +45,8 @@ export function buildSystemPrompt(projectRoot: string, workMode: WorkMode = "cod
   const focusSection = situationalFocus 
     ? `\n\n## Current Objective Focus\n${situationalFocus}`
     : "";
+  
+  const toolPromptsSection = buildToolPromptsSection();
 
   return `You are Jim — a highly autonomous AI coding agent optimized for systematically solving complex software engineering tasks.${customSection}${focusSection}
 
@@ -92,6 +119,8 @@ You have persistent memory that survives across sessions:
 - **memory_list**: Browse what's in your memory store.
 - **memory_forget**: Remove outdated or incorrect memories.
 - When context gets large, older conversation is auto-archived before compaction — you won't lose important context silently.
+
+${toolPromptsSection}
 
 ## Progressive Autonomy (Trust Levels)
 You operate under the user's trust.

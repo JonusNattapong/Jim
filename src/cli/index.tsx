@@ -49,7 +49,7 @@ function loadConfig(): AgentConfig {
     maxTurns: parseInt(process.env.MAX_TURNS ?? "25", 10),
     maxToolOutput: parseInt(process.env.MAX_TOOL_OUTPUT ?? "5000", 10),
     projectRoot,
-    permissionMode: (process.env.PERMISSION_MODE as PermissionMode) ?? "ask",
+    permissionMode: (process.env.PERMISSION_MODE as PermissionMode) ?? "edit",
     streaming: false,
     api: apiMode === "responses" || apiMode === "chat-completions" || apiMode === "openai" || apiMode === "openai-compatible" || apiMode === "auto"
       ? apiMode

@@ -1,5 +1,8 @@
 import { spawn } from "node:child_process";
 import type { ToolDefinition, ToolHandler } from "./types.js";
+import { validateRegexPattern } from "./validation/tool-validation.js";
+import { getCommandSemantics } from "./semantics/command-semantics.js";
+import { getToolError } from "./errors/error-catalogue.js";
 
 export const grep_definition: ToolDefinition = {
   type: "function",
@@ -50,6 +53,16 @@ export const grep_handler: ToolHandler = async (args) => {
   const caseInsensitive = (args.case_insensitive as boolean) ?? false;
   const maxResults = (args.max_results as number) ?? 50;
 
+  // Validate regex pattern
+  const patternValidation = validateRegexPattern(pattern);
+  if (!patternValidation.valid) {
+    const error = getToolError("INVALID_REGEX_PATTERN");
+    return {
+      content: `${error.title}\n\n${patternValidation.error}\n\n${error.suggestion}`,
+      isError: true,
+    };
+  }
+
   const rgArgs: string[] = [
     "-C", String(contextLines),
     "--max-count", String(maxResults),
@@ -82,9 +95,28 @@ export const grep_handler: ToolHandler = async (args) => {
       done = true;
       clearTimeout(killTimer);
 
-      if (code === 1) { resolve({ content: `No matches found for: ${pattern}` }); return; }
-      if (code !== 0) { resolve({ content: `grep error (exit ${code}): ${stderr || stdout}`, isError: true }); return; }
-      if (!stdout.trim()) { resolve({ content: `No matches found for: ${pattern}` }); return; }
+      // Use command semantics to interpret exit code
+      const semantics = getCommandSemantics("rg");
+      if (semantics) {
+        const interpreted = semantics(code, stdout, stderr);
+        if (!interpreted.isError) {
+          const message = interpreted.message || `No matches found for: ${pattern}`;
+          resolve({ content: message });
+          return;
+        }
+      }
+
+      if (code !== 0) {
+        const error = getToolError("COMMAND_FAILED");
+        resolve({ content: `${error.title}\n\n${stderr || stdout}`, isError: true });
+        return;
+      }
+
+      if (!stdout.trim()) {
+        const error = getToolError("NO_MATCHES_FOUND");
+        resolve({ content: error.message });
+        return;
+      }
 
       const output = stdout.length > 5000
         ? stdout.slice(0, 5000) + `\n... (${stdout.length - 5000} chars truncated)`
@@ -97,6 +129,13 @@ export const grep_handler: ToolHandler = async (args) => {
       if (done) return;
       done = true;
       clearTimeout(killTimer);
+      
+      if (err.message.includes("ENOENT")) {
+        const error = getToolError("COMMAND_NOT_FOUND");
+        resolve({ content: `${error.title}\n\nripgrep not installed.\n\n${error.suggestion}`, isError: true });
+        return;
+      }
+
       resolve({ content: `grep error: ${err.message}`, isError: true });
     });
   });

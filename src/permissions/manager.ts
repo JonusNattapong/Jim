@@ -69,7 +69,7 @@ export class PermissionManager {
   private projectRoot: string;
   private planApproved = false;
 
-  constructor(mode: PermissionMode = "ask", projectRoot: string = ".") {
+  constructor(mode: PermissionMode = "edit", projectRoot: string = ".") {
     this.mode = mode;
     this.projectRoot = projectRoot;
   }

@@ -13,8 +13,9 @@ const TOOL_LABELS: Record<string, { label: string; icon: string; verb: string }>
   ts_check:       { label: "Type checking",        icon: "✓",  verb: "check" },
 
   // Shell & git
-  run_command:    { label: "Running command",      icon: "❯",  verb: "run" },
-  git_command:    { label: "Running git",          icon: "⑂",  verb: "execute git" },
+  run_command:    { label: "Bash",             icon: "●",  verb: "execute" },
+  powershell:     { label: "PowerShell",       icon: "●",  verb: "execute" },
+  git_command:    { label: "Git",              icon: "●",  verb: "execute git" },
   get_project_info: { label: "Reading project info", icon: "ℹ", verb: "inspect" },
 
   // Planning & agent

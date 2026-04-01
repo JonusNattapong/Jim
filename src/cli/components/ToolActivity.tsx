@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
-import { theme } from "../theme.js";
+import { useTheme } from "../theme.js";
 import { toolLabel } from "../tool-labels.js";
 import { TaskBoard, parseTaskBoard } from "./TaskBoard.js";
 import { ExpandableBlock } from "./ExpandableBlock.js";
+import { DiffViewer } from "./DiffViewer.js";
 
 export interface ToolCallEntry {
   name: string;
@@ -16,10 +17,12 @@ export interface ToolCallEntry {
 
 interface ToolActivityProps {
   calls: ToolCallEntry[];
+  isExpanded?: boolean;
 }
 
 const AnimatedScanner: React.FC<{ name: string; args: string }> = ({ name, args }) => {
   const [frame, setFrame] = useState(0);
+  const { theme } = useTheme();
 
   useEffect(() => {
     const t = setInterval(() => setFrame((f) => f + 1), 120);
@@ -47,16 +50,30 @@ const AnimatedScanner: React.FC<{ name: string; args: string }> = ({ name, args 
 };
 
 const ToolActivityComponent: React.FC<ToolActivityProps> = ({ calls }) => {
+  const { theme } = useTheme();
   if (calls.length === 0) return null;
 
   const [isExpanded, setIsExpanded] = useState(false);
 
   const renderCall = (call: ToolCallEntry, i: number) => {
     const board = call.name === "todo_write" && call.rawResult ? parseTaskBoard(call.rawResult) : null;
+    const isShell = ["run_command", "powershell", "git_command"].includes(call.name);
+
+    // Parse args if it's a JSON string
+    let displayArgs = call.args;
+    try {
+      const parsed = JSON.parse(call.args);
+      displayArgs = parsed.CommandLine || parsed.command || parsed.args || call.args;
+    } catch (e) { }
+
     return (
       <Box key={i} flexDirection="column" marginTop={i > 0 ? 1 : 0}>
         {call.status === "running" ? (
-          <AnimatedScanner name={call.name} args={call.args} />
+          <Box>
+            <Text color={theme.error} bold>* </Text>
+            <Text color={theme.error} bold>Working... </Text>
+            <Text dimColor>(thinking)</Text>
+          </Box>
         ) : call.status === "pending_approval" || call.status === "awaiting_choice" ? (
           <Box>
             <Text color={theme.warning}>{call.status === "pending_approval" ? "*" : "?"}</Text>
@@ -66,23 +83,59 @@ const ToolActivityComponent: React.FC<ToolActivityProps> = ({ calls }) => {
           </Box>
         ) : (
           <Box>
-            <Text dimColor>  </Text>
-            {call.status === "error" ? (
-              <Text color={theme.error}>✗</Text>
+            {isShell ? (
+              <Box flexDirection="column">
+                <Box>
+                  <Text color={theme.success}>● </Text>
+                  <Text bold>{toolLabel(call.name)}(</Text>
+                  <Text color={theme.textMuted}>{displayArgs}</Text>
+                  <Text bold>)</Text>
+                </Box>
+                {call.rawResult && (
+                  <Box flexDirection="column" marginLeft={2}>
+                    {(() => {
+                      const lines = call.rawResult.split("\n");
+                      const showLines = lines.slice(0, 3);
+                      const remaining = lines.length - 3;
+                      return (
+                        <Box flexDirection="column">
+                          {showLines.map((line, j) => (
+                            <Text key={j} color={theme.textMuted}>└ {line}</Text>
+                          ))}
+                          {remaining > 0 && (
+                            <Text color={theme.textMuted} dimColor>  ... +{remaining} lines (ctrl+o to expand)</Text>
+                          )}
+                        </Box>
+                      );
+                    })()}
+                  </Box>
+                )}
+              </Box>
             ) : (
-              <Text color={theme.success}>✓</Text>
+              <Box>
+                <Text dimColor>  </Text>
+                {call.status === "error" ? (
+                  <Text color={theme.error}>✗</Text>
+                ) : (
+                  <Text color={theme.success}>✓</Text>
+                )}
+                <Text> </Text>
+                <Text color={call.status === "error" ? theme.error : theme.success} bold>{toolLabel(call.name)}</Text>
+                <Text dimColor> {displayArgs.slice(0, 60)}{displayArgs.length > 60 ? "..." : ""}</Text>
+              </Box>
             )}
-            <Text> </Text>
-            <Text color={call.status === "error" ? theme.error : theme.success} bold>{toolLabel(call.name)}</Text>
-            <Text dimColor> {call.args.slice(0, 60)}{call.args.length > 60 ? "..." : ""}</Text>
           </Box>
         )}
 
-        {call.rawResult && !board ? (
+        {call.rawResult && !board && !isShell ? (
           <Box marginLeft={4}>
-            <ExpandableBlock title={`Output: ${toolLabel(call.name)}`} content={call.rawResult} />
+            <ExpandableBlock
+              title={`Output: ${toolLabel(call.name)}`}
+              content={call.rawResult}
+              expanded={isExpanded}
+            />
           </Box>
-        ) : call.result && !board ? (
+        ) : call.result && !board && !isShell ? (
           <Box marginLeft={4}>
             <Text dimColor>↳ {call.result.slice(0, 100).replace(/\n/g, " ")}{call.result.length > 100 ? "..." : ""}</Text>
           </Box>
@@ -93,12 +146,11 @@ const ToolActivityComponent: React.FC<ToolActivityProps> = ({ calls }) => {
         ) : null}
 
         {call.diff && (
-          <Box flexDirection="column" marginLeft={2} marginTop={1} borderStyle="round" borderColor={theme.border} paddingX={1}>
-            {call.diff.split("\n").map((line, j) => {
-              const isAdd = line.startsWith("+");
-              const isRem = line.startsWith("-");
-              return <Text key={j} color={isAdd ? theme.success : isRem ? theme.error : theme.border}>{line}</Text>;
-            })}
+          <Box flexDirection="column" marginLeft={0} marginTop={1}>
+            <DiffViewer
+              diff={call.diff}
+              collapsed={!isExpanded}
+            />
           </Box>
         )}
       </Box>
@@ -130,10 +182,11 @@ const ToolActivityComponent: React.FC<ToolActivityProps> = ({ calls }) => {
         </Box>
         {/* We reuse Expandable block logic by letting the user expand through the parent */}
         <Box marginTop={1}>
-           <ExpandableBlock 
-             title={`View ${calls.length} Tool Operations`} 
-             content={calls.map(c => `${c.status === "done" ? "✓" : "✗"} ${toolLabel(c.name)}: ${c.args}`).join("\n")} 
-           />
+          <ExpandableBlock
+            title={`View ${calls.length} Tool Operations`}
+            content={calls.map(c => `${c.status === "done" ? "✓" : "✗"} ${toolLabel(c.name)}: ${c.args}`).join("\n")}
+            expanded={isExpanded}
+          />
         </Box>
       </Box>
     );

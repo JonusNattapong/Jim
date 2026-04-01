@@ -47,3 +47,16 @@ export interface ToolContext {
 }
 
 export type ToolHandler = (args: Record<string, any>, context?: ToolContext) => Promise<ToolResult>;
+
+/**
+ * Enhanced Tool Definition with prompt and semantic information
+ * Used by tools to provide better guidance and error handling
+ */
+export interface EnhancedToolDefinition extends ToolDefinition {
+  /** Reference to tool-specific prompt template (e.g., "run_command", "grep") */
+  promptKey?: string;
+  /** Custom error catalogue keys this tool uses */
+  errorKeys?: string[];
+  /** Command semantics for interpreting exit codes (for shell-based tools) */
+  commandSemantic?: string;
+}

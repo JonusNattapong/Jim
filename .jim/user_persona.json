@@ -17,7 +17,7 @@
     "Appreciates summaries of completed work"
   ],
   "toolUsagePatterns": {},
-  "communicationStyle": "Casual and friendly, direct when requesting tasks, explores project structure by asking about specific files",
+  "communicationStyle": "Casual and friendly, initiates conversation with simple greetings",
   "knownConcepts": [
     "TypeScript compilation and error checking",
     "Running tests and build scripts",
@@ -28,7 +28,8 @@
     "Mathematical formulas in code (e.g., sphere volume V = (4/3) × π × r³)",
     "JSDoc documentation standards",
     "Todo/plan approval workflow before mutations",
-    "Project 'jim' is an AI coding agent"
+    "Project 'jim' is an AI coding agent",
+    "Interest in gaming - World of Warcraft"
   ],
-  "lastUpdated": "2026-03-31T20:46:24.679Z"
+  "lastUpdated": "2026-03-31T23:36:31.293Z"
 }

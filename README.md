@@ -1,12 +1,13 @@
 # JimCode
 
+<img src="assets/logo-github.png" alt="JimCode" width="640" />
 <img src="assets/interface.png" alt="Jim Interface" width="640" />
 
-JimCode is an open-source, terminal-based AI coding agent framework. It features a proactive learning loop inspired by Hermes, with **35+ built-in tools** for file manipulation, shell commands, web access, social media, office documents, and more. JimCode supports multiple LLM providers, dynamic tool loading via MCP, and structured workflows for planning and execution.
+JimCode is an open-source, terminal-based AI coding agent framework. It features a proactive learning loop inspired by Hermes, with 28+ built-in tools for file manipulation, shell commands, web access, social media, office documents, and more. JimCode supports multiple LLM providers, dynamic tool loading via MCP, and structured workflows for planning and execution.
 
 ## Highlights
 
-- `35+ built-in tools` plus dynamic MCP tools
+- `28+ built-in tools` plus dynamic MCP tools
 - `Multi-model CLI` with searchable model and provider pickers
 - `Provider selection` with favorites, recents, presets, and native provider setup modals
 - `Work modes` for `architect`, `ask`, and `code`
@@ -27,25 +28,9 @@ JimCode is an open-source, terminal-based AI coding agent framework. It features
 - `UI themes` for terminal customization
 - `YOLO mode` for bypassing safety checks
 - `Ollaman` background task support
-- `Antigravity Browser` with premium HUD, visual ripples, and smooth scrolling
-- `Pending Messages Queue` for asynchronous, non-blocking task discovery
-- `Concurrent Messaging`: Send follow-up instructions while Jim is busy; they are automatically queued for the next turn.
-- `Real-time Interrupts`: Use slash commands like `/stop`, `/queue`, or `/browser` even during long-running tasks.
 - `Structured logging` with `pino`
 - `Semantic repo map` powered by `ts-morph`
 - `Provider metadata registry` for adapter capabilities, transport, and model recommendations
-- `Bridge system` for remote control via WebSocket
-- `Command system` with 20+ slash commands
-- `Keybinding system` with chord support and hot reload
-- `Desktop notifications` for alerts
-- `Telemetry` for usage analytics
-- `Diagnostics` for system health monitoring
-- `Rate limiting` for API usage management
-- `Voice integration` for accessibility
-- `Vim mode` for editor integration
-- `PowerShell support` for Windows users
-- `Jupyter notebook editing` for data science workflows
-- `MCP OAuth authentication` for enterprise use
 
 ## Quick Start
 
@@ -93,11 +78,6 @@ export LOG_LEVEL=debug
 - Save sessions and restore checkpoints from the terminal UI
 - Query knowledge graph for codebase understanding
 - Check TypeScript for errors and get hover information
-- Remote control via bridge WebSocket server
-- Desktop notifications for task completion alerts
-- **Antigravity Browser Engine**: Real-time visual feedback with orange border HUD, interaction ripples, and smooth navigation.
-- **Async Messaging Queue**: Decoupled task management allowing sub-agents to queue follow-ups without stopping.
-- **Role-Based Intelligence**: Specialized protocols for browser agents and web surfers.
 
 ### Work modes
 
@@ -131,64 +111,8 @@ export LOG_LEVEL=debug
 | Tool               | Purpose                             |
 | ------------------ | ----------------------------------- |
 | `run_command`      | Shell execution (sandboxed)         |
-| `powershell`       | PowerShell execution (Windows)      |
 | `git_command`      | Safe git operations                 |
-| `browser_action`   | **Antigravity Browser** (Playwright) |
-| `pending_messages` | Manage async task queue (Mailbox)   |
-
-### Browser Actions (`browser_action`)
-
-The Antigravity Browser engine supports **17 actions** for comprehensive web automation:
-
-#### Navigation & History
-
-| Action | Parameters | Description |
-|--------|------------|-------------|
-| `navigate` | `url` | Go to a URL |
-| `back` | - | Go back in browser history |
-| `forward` | - | Go forward in browser history |
-
-#### Multi-Tab Management
-
-| Action | Parameters | Description |
-|--------|------------|-------------|
-| `new_tab` | `url` | Open URL in a new tab |
-| `switch_tab` | `tab_index` or `tab_title` | Switch to a tab by index or title substring |
-| `close_tab` | - | Close current tab |
-| `list_tabs` | - | List all open tabs with titles and URLs |
-
-#### Interaction
-
-| Action | Parameters | Description |
-|--------|------------|-------------|
-| `click` | `selector` or `text` | Click an element by CSS selector or text content |
-| `type` | `selector`, `text` | Type text into an input field |
-| `wait` | `selector`, `timeout` | Wait for an element to appear (default: 30s) |
-| `upload` | `selector`, `file_path` | Upload a file to a file input element |
-
-#### Content & Analysis
-
-| Action | Parameters | Description |
-|--------|------------|-------------|
-| `extract` | - | Get page text content and interactive elements tree |
-| `evaluate` | `script` | Run custom JavaScript in page context |
-| `metrics` | - | Get performance metrics (load time, FCP, resource count) |
-
-#### Visual & Navigation
-
-| Action | Parameters | Description |
-|--------|------------|-------------|
-| `screenshot` | `file_path` | Capture current page as PNG image |
-| `scroll` | `direction`, `amount` | Scroll page (up/down/top/bottom) with smooth animation |
-| `status` | - | Check if browser is running and current URL |
-
-**Features:**
-
-- 🎨 **Premium HUD** with orange border, status indicator, and REC badge
-- 💫 **Visual Ripples** on click interactions
-- 🎯 **Element Highlighting** before actions
-- 📹 **Video Recording** saved to `.recordings/` folder
-- 🔄 **Smooth Scrolling** with cubic-bezier animation
+| `browser_action`   | Browser automation                  |
 
 ### Task Management
 
@@ -232,161 +156,46 @@ The Antigravity Browser engine supports **17 actions** for comprehensive web aut
 | `spawn_agent`      | Delegate to a sub-agent             |
 | `list_plugins`     | Show built-in and MCP plugin groups |
 
-### MCP & Remote
-
-| Tool               | Purpose                             |
-| ------------------ | ----------------------------------- |
-| `mcp`              | MCP server management               |
-| `mcp_resources`    | MCP resource discovery              |
-| `mcp_auth`         | MCP OAuth authentication            |
-| `bridge`           | Bridge server for remote control    |
-| `direct_connect`   | Direct WebSocket connections        |
-
-### Notifications & Alerts
-
-| Tool               | Purpose                             |
-| ------------------ | ----------------------------------- |
-| `notify`           | Send desktop notifications          |
-
-### Notebook Editing
-
-| Tool               | Purpose                             |
-| ------------------ | ----------------------------------- |
-| `notebook_edit`    | Edit Jupyter notebook cells         |
-
 MCP tools are loaded dynamically from `.mcp.json` and appear as additional tool namespaces at runtime.
 
-## Slash Commands
+## CLI Commands
 
-JimCode includes a comprehensive command system with 20+ slash commands:
-
-### Git Commands
-
-| Command | Description |
-|---------|-------------|
-| `/commit [message]` | Stage and commit changes |
-| `/review [file]` | Code review with suggestions |
-| `/diff [file]` | Show diff with explanations |
-| `/branch [action] [name]` | Branch management |
-
-### Context Commands
-
-| Command | Description |
-|---------|-------------|
-| `/memory` | View memory files |
-| `/context` | Show current context |
-| `/compact` | Compact conversation |
-
-### Session Commands
-
-| Command | Description |
-|---------|-------------|
-| `/session [action]` | Session management |
-| `/resume [id]` | Resume previous session |
-
-### Config Commands
-
-| Command | Description |
-|---------|-------------|
-| `/model [name]` | Switch model |
-| `/config [action]` | Configuration management |
-| `/permissions [action]` | Permission management |
-
-### Dev Commands
-
-| Command | Description |
-|---------|-------------|
-| `/doctor` | System diagnostics |
-| `/init` | Project initialization |
-| `/stats` | Usage statistics |
-
-### Tools Commands
-
-| Command | Description |
-|---------|-------------|
-| `/plugin [action]` | Plugin management |
-| `/skills [action]` | Skill management |
-| `/tasks [action]` | Task management |
-| `/hooks [action]` | Hook management |
-| `/mcp [action]` | MCP server management |
-| `/queue` | View pending messages queue |
-| `/next` | Process next task from queue |
-| `/browser` | Show active browser status |
-
-## Bridge System (Remote Control)
-
-JimCode includes a bridge system for remote control via WebSocket:
-
-```bash
-# Start bridge server
-/bridge start
-
-# Check status
-/bridge status
-
-# Stop bridge server
-/bridge stop
+```text
+/reset              Clear conversation
+/approve            Approve the current plan
+/model [name]       Show or switch model
+/models             List models
+/provider [name]    Show or switch current service
+/providers          Pick a provider service (OpenCode, OpenRouter, etc.)
+/adapters           Pick a technical provider adapter (OpenAI, Anthropic, etc.)
+/connect [name]     Connect a service by ID
+/connections        List all available provider services
+/mode <mode>        Permission mode (plan/edit/ask)
+/auto-approve       Toggle auto-approve
+/workmode [name]    Show or switch architect|ask|code
+/modes              Pick a work mode interactively
+/learn <fact>       Save a fact to memory
+/rules              Show conditional rules
+/compact            Compact conversation context
+/stream             Toggle streaming mode
+/sessions           Browse saved sessions
+/load <id>          Load a session
+/delete <id>        Delete a session
+/checkpoint <label> Create a checkpoint
+/checkpoints        Browse checkpoints
+/restore <id>       Restore a checkpoint
+/themes             Pick a UI color theme
+/plugins            Browse plugin catalog
+/hooks              Show configured hooks
+/memory             Show loaded memory layers
+/config             Show current config
+/stats              Show usage statistics
+/history            Message stats
+/yolo               Toggle YOLO mode (bypass all safety)
+/ollaman [model]    Toggle Ollaman background tasks
+/help               Show help
+/quit               Exit
 ```
-
-Features:
-
-- WebSocket server on configurable port
-- Session authentication with tokens
-- Real-time command execution from remote
-- File operations from remote
-- Session state synchronization
-- Heartbeat/ping-pong for connection health
-
-## Keybinding System
-
-JimCode supports customizable keybindings with chord support:
-
-- Ctrl+C: Cancel current operation
-- Ctrl+D: Exit application
-- Ctrl+L: Clear screen
-- Ctrl+K: Clear input line
-- Ctrl+A: Move cursor to start
-- Ctrl+E: Move cursor to end
-- Tab: Autocomplete
-- Enter: Submit input
-- Escape: Cancel
-
-Chord examples:
-
-- Ctrl+K, Ctrl+S: Save
-- Ctrl+K, Ctrl+R: Run
-
-## Notifications
-
-JimCode can send desktop notifications for:
-
-- Task completion
-- Error alerts
-- System status updates
-
-Supported platforms:
-
-- macOS: osascript
-- Windows: PowerShell toast notifications
-- Linux: notify-send (with bell fallback)
-
-## Telemetry & Diagnostics
-
-JimCode includes:
-
-- Usage telemetry for analytics
-- System diagnostics via `/doctor`
-- Rate limiting for API usage
-- Health monitoring
-
-## Vim Mode
-
-JimCode supports Vim keybindings:
-
-- Normal mode: h/j/k/l navigation
-- Insert mode: Standard text input
-- Visual mode: Text selection
-- Command mode: :w, :q, :wq commands
 
 ## Planning and Approval
 
@@ -494,14 +303,6 @@ At runtime Jim:
 - refreshes tools when servers report changes
 - shows plugin groups through `/plugins`
 
-### MCP Authentication
-
-For enterprise MCP servers requiring OAuth:
-
-```bash
-/mcp_auth server=myservice auth_type=oauth token=your_token
-```
-
 ## Models
 
 Jim supports multiple models through various providers. Use `/models` to list available models or `/provider` to view current provider details.
@@ -605,52 +406,7 @@ npm run test:legacy
 - `zod`
 - `pino`
 - `vitest`
-- `ws` (WebSocket for bridge)
-
-## Architecture
-
-### Core Systems
-
-- **Agent Loop**: Main execution loop with tool orchestration
-- **Query Pipeline**: Message processing with streaming support
-- **Tool Registry**: Dynamic tool registration and management
-- **Permission System**: Multi-layer security with rule engine
-- **Context Manager**: Session state and memory management
-
-### Services
-
-- **Bridge Server**: WebSocket-based remote control
-- **Notifications**: Desktop notification service
-- **Telemetry**: Usage analytics and tracking
-- **Diagnostics**: System health monitoring
-- **Rate Limits**: API usage management
-- **Keybindings**: Customizable keyboard shortcuts
-- **Voice**: Voice integration support
-- **Buddy**: Companion system for UX enhancement
-
-### Agent Features
-
-- **Sub-agents**: Parallel task execution
-- **Swarm**: Multi-agent orchestration
-- **Tree Search**: Monte Carlo simulation for planning
-- **Reflexion**: Self-critique system
-- **Session Memory**: Persistent conversation state
-- **Compaction**: Context window management
-
-## Acknowledgments
-
-JimCode is inspired by and grateful to the following projects:
-
-- **[Claude Code](https://github.com/anthropics/claude-code)** — Anthropic's terminal-based AI coding agent. Claude Code's architecture, tool system, and planning workflow served as a major inspiration for JimCode's design.
-- **[OpenCode](https://github.com/opencode-ai/opencode)** — Open-source AI coding agent with multi-provider support. OpenCode's provider abstraction and extensible architecture influenced JimCode's multi-model approach.
-- **[Codex](https://github.com/openai/codex)** — OpenAI's coding agent that demonstrated the power of AI-assisted development with tool use and sandboxed execution.
-- **[Cline](https://github.com/cline/cline)** — VS Code extension for AI coding assistance. Cline's approach to tool integration and user interaction patterns helped shape JimCode's CLI experience.
-- **[Antigravity](https://github.com/antigravity-ai/antigravity)** — Innovative AI development environment that pushed boundaries in terminal-based AI tooling.
-
-We thank the maintainers and contributors of these projects for their pioneering work in AI-assisted software development. JimCode builds upon their ideas while adding unique features like knowledge graphs, reflexion engines, multi-agent orchestration, and persona learning.
 
 ## License
 
-MIT License
-
-Copyright (c) 2024-2026 JonusNattapong
+MIT

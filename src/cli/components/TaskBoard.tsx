@@ -22,22 +22,6 @@ export interface TaskBoardData {
   total: number;
 }
 
-const STATUS_LABEL: Record<TaskBoardItem["status"], string> = {
-  pending: "pending",
-  in_progress: "in progress",
-  blocked: "blocked",
-  completed: "completed",
-  cancelled: "cancelled",
-};
-
-const STATUS_COLOR: Record<TaskBoardItem["status"], string> = {
-  pending: theme.border,
-  in_progress: theme.warning,
-  blocked: theme.error,
-  completed: theme.success,
-  cancelled: theme.border,
-};
-
 function parsePriority(token: string): TaskBoardItem["priority"] {
   if (token === "[!]") return "high";
   if (token === "[_]") return "low";
@@ -120,83 +104,58 @@ export function parseTaskBoard(content: string): TaskBoardData | null {
   };
 }
 
-function statusGlyph(status: TaskBoardItem["status"]): string {
-  switch (status) {
-    case "completed":
-      return "●";
-    case "in_progress":
-      return "◐";
-    case "blocked":
-      return "◌";
-    case "cancelled":
-      return "◦";
-    default:
-      return "○";
-  }
-}
-
-function priorityAccent(priority: TaskBoardItem["priority"]): string {
-  switch (priority) {
-    case "high":
-      return "!";
-    case "low":
-      return "-";
-    default:
-      return "·";
-  }
-}
-
-interface TaskBoardProps {
-  board: TaskBoardData;
-}
-
-export const TaskBoard: React.FC<TaskBoardProps> = ({ board }) => {
-  const remaining = Math.max(board.total - board.completed, 0);
-
+export const TaskBoard: React.FC<{ board: TaskBoardData }> = ({ board }) => {
   return (
-    <Box borderStyle="round" borderColor={theme.primary} paddingX={1} paddingY={0} marginTop={1} marginLeft={4} flexDirection="column">
-      <Box justifyContent="space-between">
-        <Text color={theme.primary}>{board.completed} of {board.total} tasks resolved</Text>
-        <Text dimColor>{board.title}</Text>
+    <Box flexDirection="column" marginTop={1} marginLeft={0}>
+      {/* Premium Header: Claude Style */}
+      <Box marginBottom={0}>
+        <Text color={theme.success} bold>● </Text>
+        <Text bold>{board.title}</Text>
       </Box>
 
-      {board.items.map((item) => (
-        <Box key={item.index} flexDirection="column" marginTop={1}>
-          <Box>
-            <Text color={STATUS_COLOR[item.status]}>{statusGlyph(item.status)}</Text>
-            <Text> </Text>
-            <Text dimColor>{item.index + 1}.</Text>
-            <Text> </Text>
-            <Text color={item.priority === "high" ? theme.error : item.priority === "low" ? theme.secondary : theme.accent}>{priorityAccent(item.priority)}</Text>
-            <Text> </Text>
-            <Text bold color={item.status === "completed" ? theme.border : theme.text}>{item.content}</Text>
-          </Box>
-
-          <Box marginLeft={4}>
-            <Text color={STATUS_COLOR[item.status]}>{STATUS_LABEL[item.status]}</Text>
-            {item.owner ? <Text dimColor>{`  owner ${item.owner}`}</Text> : null}
-            {item.dependsOn && item.dependsOn.length > 0 ? <Text dimColor>{`  depends ${item.dependsOn.map((value) => value + 1).join(", ")}`}</Text> : null}
-          </Box>
-
-          {item.acceptanceCriteria ? (
-            <Box marginLeft={4}>
-              <Text dimColor>done when {item.acceptanceCriteria}</Text>
+      {/* Task List: Borderless, Compact */}
+      {board.items.map((item) => {
+        const isInProgress = item.status === "in_progress";
+        const isDone = item.status === "completed";
+        const isBlocked = item.status === "blocked";
+        
+        let glyph = "[ ]";
+        if (isDone) glyph = "[x]";
+        if (isBlocked) glyph = "[!]";
+        
+        return (
+          <Box key={item.index} marginLeft={2}>
+            {isInProgress ? (
+              <Text color={theme.warning} bold>* </Text>
+            ) : (
+              <Box width={2}>
+                 <Text color={theme.textMuted} dimColor>{isDone ? "✓" : " "}</Text>
+              </Box>
+            )}
+            
+            <Box flexDirection="column">
+              <Box>
+                <Text color={isDone ? theme.textMuted : theme.text} strikethrough={isDone}>
+                  {item.content}
+                </Text>
+                {item.priority === "high" && !isDone && (
+                  <Text color={theme.error} bold> [!!]</Text>
+                )}
+              </Box>
+              
+              {/* Optional details (only if important) */}
+              {(item.notes || item.owner) && !isDone && (
+                <Box marginLeft={2}>
+                   <Text dimColor italic color={theme.textMuted}>
+                     {item.owner ? `@${item.owner} ` : ""}
+                     {item.notes ? `(${item.notes})` : ""}
+                   </Text>
+                </Box>
+              )}
             </Box>
-          ) : null}
-
-          {item.notes ? (
-            <Box marginLeft={4}>
-              <Text dimColor>{item.notes}</Text>
-            </Box>
-          ) : null}
-        </Box>
-      ))}
-
-      <Box marginTop={1}>
-        <Text dimColor>{remaining} remaining</Text>
-        <Text dimColor>{`  ${board.inProgress} in progress`}</Text>
-        <Text dimColor>{`  ${board.blocked} blocked`}</Text>
-      </Box>
+          </Box>
+        );
+      })}
     </Box>
   );
 };

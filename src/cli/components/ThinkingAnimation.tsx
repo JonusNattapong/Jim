@@ -1,36 +1,27 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
-import { theme } from "../theme.js";
-import { GradientText } from "./GradientText.js";
+import { useTheme } from "../theme.js";
 import { tips } from "../tips.js";
-
-const PHASES = [
-  "▖▘▖▙▛▜▞▛▙▗▛▝▟▟", // 14 chars
-  "▗▘▙▚▛▜▝▞▟▖▜▛▙",  // 13 chars
-  "▘▙▚▛▜▝▞▟▖▗▝▞",   // 12 chars
-  "▙▚▛▜▝▞▟▖▗▘▞",    // 11 chars
-  "▚▛▜▝▞▟▖▗▘▙",     // 10 chars
-  "▛▜▝▞▟▖▗▘▙▚▖",    // 11 chars
-  "▜▝▞▟▖▗▘▙▚▛▗▘",   // 12 chars
-  "▝▞▟▖▗▘▙▚▛▜▘▙▚",  // 13 chars
-  "▞▟▖▗▘▙▚▛▜▝▙▚▛▞", // 14 chars
-  "▟▖▗▘▙▚▛▜▝▞▚▛▜▟", // 14 chars
-];
-
-const PHRASES = [
-  "SCANNING", "PROBING", "MAPPING", "PARSING", "MODELING",
-  "RESOLVING", "REASONING", "SYNTHESIZING", "CODING", "REFINING"
-];
+import { getRandomVerb } from "../spinner-verbs.js";
 
 interface ThinkingAnimationProps {
   tokens?: number;
   startTime?: number;
+  mode?: "condensed" | "full";
+  thinking?: string;
 }
 
-export const ThinkingAnimation: React.FC<ThinkingAnimationProps> = ({ tokens, startTime }) => {
+export const ThinkingAnimation: React.FC<ThinkingAnimationProps> = ({ 
+  tokens, 
+  startTime, 
+  mode = "condensed",
+  thinking 
+}) => {
   const [frame, setFrame] = useState(0);
   const [tipIdx] = useState(() => Math.floor(Math.random() * tips.length));
   const [now, setNow] = useState(Date.now());
+  const [verb, setVerb] = useState(() => getRandomVerb());
+  const { theme } = useTheme();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -40,8 +31,13 @@ export const ThinkingAnimation: React.FC<ThinkingAnimationProps> = ({ tokens, st
     return () => clearInterval(timer);
   }, []);
 
-  const phase = frame % PHASES.length;
-  const phraseIdx = Math.floor(frame / 12) % PHRASES.length;
+  useEffect(() => {
+    // Randomized verb rotation (every ~1.5 - 2s)
+    const verbTimer = setInterval(() => {
+      setVerb(getRandomVerb());
+    }, 1800);
+    return () => clearInterval(verbTimer);
+  }, []);
 
   const elapsedMs = startTime ? now - startTime : 0;
   const elapsedSec = Math.floor(elapsedMs / 1000);
@@ -50,15 +46,37 @@ export const ThinkingAnimation: React.FC<ThinkingAnimationProps> = ({ tokens, st
     ? `${elapsedMin}m ${elapsedSec % 60}s`
     : `${elapsedSec}s`;
 
+  // Condensed mode - compact display
+  if (mode === "condensed") {
+    return (
+      <Box flexDirection="column" marginTop={1} marginLeft={0}>
+        <Box>
+          <Text color={theme.error} bold>* </Text>
+          <Text color={theme.text} bold>{verb}...</Text>
+          <Text dimColor> (</Text>
+          <Text color={theme.text} dimColor>{displayTime}</Text>
+          {tokens !== undefined && (
+            <>
+              <Text dimColor> • </Text>
+              <Text color={theme.text} dimColor>↓ {(tokens / 1000).toFixed(1)}k tokens</Text>
+            </>
+          )}
+          <Text dimColor>)</Text>
+        </Box>
+        
+        <Box marginLeft={2} marginTop={0}>
+          <Text color={theme.textMuted} dimColor>└ Tip: {tips[tipIdx]}</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Full mode - expanded display with thinking content
   return (
-    <Box flexDirection="column" marginTop={1} marginLeft={2}>
-      <Box flexDirection="row">
-        <Text color={theme.primary} bold>{PHASES[phase]} </Text>
-        <Text bold>
-          <GradientText animate={true} colors={[theme.primary, theme.secondary, theme.primaryBright, theme.primary]}>
-            {PHRASES[phraseIdx]}
-          </GradientText>
-        </Text>
+    <Box flexDirection="column" marginTop={1} marginLeft={0}>
+      <Box>
+        <Text color={theme.error} bold>* </Text>
+        <Text color={theme.text} bold>{verb}...</Text>
         <Text dimColor> (</Text>
         <Text color={theme.text} dimColor>{displayTime}</Text>
         {tokens !== undefined && (
@@ -69,8 +87,21 @@ export const ThinkingAnimation: React.FC<ThinkingAnimationProps> = ({ tokens, st
         )}
         <Text dimColor>)</Text>
       </Box>
-      <Box marginLeft={4}>
-        <Text dimColor>└ Tip: {tips[tipIdx]}</Text>
+      
+      {/* Thinking content */}
+      {thinking && (
+        <Box marginLeft={2} marginTop={1} flexDirection="column">
+          <Text color={theme.textMuted} dimColor>💭 Thinking:</Text>
+          <Box marginLeft={2} marginTop={0}>
+            <Text color={theme.textMuted} dimColor>
+              {thinking.length > 200 ? thinking.slice(0, 200) + "..." : thinking}
+            </Text>
+          </Box>
+        </Box>
+      )}
+      
+      <Box marginLeft={2} marginTop={1}>
+        <Text color={theme.textMuted} dimColor>└ Tip: {tips[tipIdx]}</Text>
       </Box>
     </Box>
   );

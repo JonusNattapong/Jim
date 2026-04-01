@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Box, Text, useInput, useApp, useStdout } from "ink";
+import { Box, Text, useInput, useApp } from "ink";
 import TextInput from "ink-text-input";
 import { Header } from "./components/Header.js";
 import { Message } from "./components/Message.js";
@@ -16,10 +16,7 @@ import { ConnectModal } from "./components/ConnectModal.js";
 import { StatsView } from "./components/StatsView.js";
 import { ConfigView } from "./components/ConfigView.js";
 import { ThoughtProcess } from "./components/ThoughtProcess.js";
-import { SubAgentCard } from "./components/SubAgentCard.js";
-import { ProgressBar } from "./components/ProgressBar.js";
 import { Agent } from "../agent/index.js";
-import type { SubAgentStatus } from "../agent/subagent.js";
 import type { AgentCallbacks } from "../agent/index.js";
 import handleMcpCommand from "./mcpCommand.js";
 import type { PermissionMode } from "../permissions/manager.js";
@@ -69,8 +66,6 @@ const COMMANDS = [
   { cmd: "modes", desc: "Pick a work mode interactively" },
   { cmd: "learn", desc: "Add fact to memory" },
   { cmd: "rules", desc: "Show conditional rules" },
-  { cmd: "stop", desc: "Abort the current running task" },
-  { cmd: "header", desc: "Toggle the ASCII header visibility" },
   { cmd: "compact", desc: "Compact conversation context" },
   { cmd: "stream", desc: "Toggle streaming mode" },
   { cmd: "sessions", desc: "List saved sessions" },
@@ -89,9 +84,6 @@ const COMMANDS = [
   { cmd: "stats", desc: "Show usage statistics" },
   { cmd: "config", desc: "Show current config" },
   { cmd: "memory", desc: "Show memory layers" },
-  { cmd: "queue", desc: "Show pending messages queue" },
-  { cmd: "next", desc: "Process next item in queue" },
-  { cmd: "browser", desc: "Show active browser status" },
   { cmd: "approve", desc: "Approve the current proposed plan" },
   { cmd: "yolo", desc: "Toggle YOLO mode: bypass all safety checks" },
   { cmd: "ollaman", desc: "Toggle Ollaman for background tasks" },
@@ -207,15 +199,6 @@ function buildSessionPickerItems(sessions: SessionSummary[]): SelectorItem[] {
 
 export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, initialStreaming }) => {
   const { exit } = useApp();
-  const { stdout } = useStdout();
-  const [columns, setColumns] = React.useState(stdout?.columns || 80);
-  const abortControllerRef = React.useRef<AbortController | null>(null);
-
-  React.useEffect(() => {
-    const handleResize = () => setColumns(stdout?.columns || 80);
-    stdout?.on("resize", handleResize);
-    return () => { stdout?.off("resize", handleResize); };
-  }, [stdout]);
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => mapOpenAiToUiMessages(agent.getConversationHistory()));
   const [autoApprove, setAutoApprove] = useState(false);
@@ -237,10 +220,8 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
   const [showConfig, setShowConfig] = useState(false);
   const [connectModal, setConnectModal] = useState<ConnectModalState | null>(null);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
-  const [processingProgress, setProcessingProgress] = useState<{ message: string; percent: number } | null>(null);
   const [uiState, setUiState] = useState(() => loadCliUiState(agent.getProjectRoot()));
   const [thoughtProcess, setThoughtProcess] = useState("");
-  const [subAgents, setSubAgents] = useState<Record<string, SubAgentStatus>>({});
   const promptHistorySnapshot = usePromptHistorySnapshot();
   const sessionSummarySnapshot = useSessionSummarySnapshot(agent.getProjectRoot());
 
@@ -248,7 +229,6 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
   const deferredStreamBuffer = React.useDeferredValue(streamBuffer);
   const deferredThoughtProcess = React.useDeferredValue(thoughtProcess);
   const deferredMessages = React.useDeferredValue(messages);
-  const deferredInput = React.useDeferredValue(input);
 
   // Reset suggestion scroll when typing
   useEffect(() => {
@@ -307,25 +287,6 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       case "quit": case "exit":
         await agent.close();
         exit();
-        return;
-
-      case "stop":
-        if (isProcessing && abortControllerRef.current) {
-          abortControllerRef.current.abort();
-          setCmdOutput({ type: "info", content: "🚫 Task aborted by user." });
-          setIsProcessing(false);
-          setProcessingProgress(null);
-        } else {
-          setCmdOutput({ type: "info", content: "No task is currently running." });
-        }
-        return;
-
-      case "header":
-        {
-          const next = { ...uiState, showHeader: !uiState.showHeader };
-          persistUiState(next);
-          setCmdOutput({ type: "info", content: `Header is now ${next.showHeader ? "on" : "off"}.` });
-        }
         return;
 
       case "reset":
@@ -854,43 +815,6 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
         return;
       }
 
-      case "queue": {
-        const { getPendingMessagesQueue } = await import("../services/pending-messages.js");
-        const q = getPendingMessagesQueue();
-        setCmdOutput({ type: "info", content: q.format() });
-        return;
-      }
-
-      case "next": {
-        const { getPendingMessagesQueue } = await import("../services/pending-messages.js");
-        const q = getPendingMessagesQueue();
-        const next = q.getNext();
-        if (!next) {
-          setCmdOutput({ type: "info", content: "Queue is empty. No pending tasks." });
-        } else {
-          setCmdOutput({ type: "success", content: `🚀 Starting next task: "${next.content.slice(0, 60)}..."` });
-          // We trigger handleSubmit to actually run the task
-          q.markProcessing(next.id);
-          handleSubmit(next.content).then(() => {
-             q.markCompleted(next.id);
-          });
-        }
-        return;
-      }
-
-      case "browser": {
-        const { browserService } = await import("../tools/browser_service.js");
-        const page = await browserService.getPage().catch(() => null);
-        if (!page) {
-           setCmdOutput({ type: "info", content: "Browser is not running." });
-        } else {
-           const url = page.url();
-           const title = await page.title();
-           setCmdOutput({ type: "success", content: `🌍 **Browser Active**\nURL: ${url}\nTitle: ${title}` });
-        }
-        return;
-      }
-
       case "help":
         setCmdOutput({
           type: "list",
@@ -928,9 +852,6 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
             "/memory           Show memory",
             "/config           Show config",
             "/stats            Show usage statistics",
-            "/queue            Show pending messages queue",
-            "/next             Process next item in queue",
-            "/browser          Show active browser status",
             "/history          Message stats",
             "/history search   Search prompt history",
             "/approve          APPROVE the current plan",
@@ -995,18 +916,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
 
   const handleSubmit = useCallback(async (value: string) => {
     const trimmed = value.trim();
-    if (!trimmed) return;
-    
-    // Allow slash commands even when processing
-    if (isProcessing && !trimmed.startsWith("/")) {
-      // Queue regular messages instead of ignoring them
-      const { getPendingMessagesQueue } = await import("../services/pending-messages.js");
-      const q = getPendingMessagesQueue();
-      q.add(trimmed, "normal");
-      setCmdOutput({ type: "info", content: "📥 Message queued! Jim will address this after finishing the current task." });
-      setInput("");
-      return;
-    }
+    if (!trimmed || isProcessing) return;
 
     const nextUiState = {
       ...uiState,
@@ -1029,7 +939,6 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
     setStartTime(Date.now());
     setActiveTools([]);
     setStreamBuffer("");
-    setSubAgents({});
 
     setThoughtProcess("");
 
@@ -1108,59 +1017,13 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       onHookFired(event, output) {
         setMessages(prev => [...prev, { role: "system", content: `Hook [${event}]: ${output}` }]);
       },
-      onSubAgentStatus(status) {
-        setSubAgents(prev => {
-          const old = prev[status.id];
-          if (old && status.cost > old.cost) {
-            const diff = status.cost - old.cost;
-            // Note: This is a bit tricky since we are inside a hook's callback 
-            // but we want to update the agent's internal cost tracker.
-            // For simplicity and immediate parity, we'll let the UI handle the display 
-            // and the agent will track its own turns.
-          }
-          return { ...prev, [status.id]: status };
-        });
-      },
-      onProgress(message, percent) {
-        setProcessingProgress({ message, percent });
-      },
       onSessionSaved() {
         // silent
-      },
-      onInfo(content) {
-        setMessages(prev => [...prev, { role: "system", content }]);
       },
     };
 
     try {
-      let finalResponse = "";
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      const generator = agent.run(trimmed, callbacks, controller.signal);
-
-      for await (const event of generator) {
-        if (controller.signal.aborted) break;
-        switch (event.type) {
-          case "thinking":
-            if (event.content && !["[Compacting context...]", "[Rate limited, waiting 5s...]", "[Generating repository map...]"].includes(event.content)) {
-              setThoughtProcess(prev => prev ? prev + "\n" + event.content : event.content);
-            }
-            break;
-          case "info":
-            setMessages(prev => [...prev, { role: "system", content: event.content }]);
-            break;
-          case "stream_chunk":
-            setStreamBuffer(prev => prev + event.chunk);
-            setThoughtProcess(prev => prev + event.chunk);
-            break;
-          case "error":
-            setMessages(prev => [...prev, { role: "system", content: `Error: ${event.message}` }]);
-            break;
-          case "done":
-            finalResponse = event.content;
-            break;
-        }
-      }
+      const response = await agent.run(trimmed, callbacks);
 
       // Finalize tools into the user's message
       setActiveTools(current => {
@@ -1177,19 +1040,19 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       });
 
       // Add assistant response
-      if (finalResponse && !finalResponse.startsWith("Error:")) {
+      if (response && !response.startsWith("Error:")) {
         if (!streaming) {
-          // Hacker Typewriter Effect (only if response wasn't already streamed)
+          // Hacker Typewriter Effect
           setStreamBuffer("");
           const chunkSize = 3;
-          for (let i = 0; i < finalResponse.length; i += chunkSize) {
-            setStreamBuffer(prev => prev + finalResponse.slice(i, i + chunkSize));
+          for (let i = 0; i < response.length; i += chunkSize) {
+            setStreamBuffer(prev => prev + response.slice(i, i + chunkSize));
             await new Promise(r => setTimeout(r, 25)); // Smooth terminal typewriter speed
           }
         }
-        setMessages(prev => [...prev, { role: "assistant", content: finalResponse }]);
-      } else if (finalResponse?.startsWith("Error:")) {
-        setMessages(prev => [...prev, { role: "system", content: finalResponse }]);
+        setMessages(prev => [...prev, { role: "assistant", content: response }]);
+      } else if (response?.startsWith("Error:")) {
+        setMessages(prev => [...prev, { role: "system", content: response }]);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -1199,7 +1062,6 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       setStartTime(null);
       setStreamBuffer("");
       setThoughtProcess("");
-      setProcessingProgress(null);
     }
   }, [agent, isProcessing, handleCommand, persistUiState, promptHistory, streaming, streamBuffer, uiState]);
 
@@ -1260,7 +1122,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       let suggestionCount = 0;
       if (input.startsWith("/")) {
         if (parts.length === 1) {
-          suggestionCount = COMMANDS.filter(c => ("/" + c.cmd).startsWith(input.toLowerCase())).slice(0, 20).length;
+          suggestionCount = COMMANDS.filter(c => ("/" + c.cmd).startsWith(input.toLowerCase())).slice(0, 5).length;
         } else if (parts.length === 2) {
           const cmd = parts[0].toLowerCase();
           const argPrefix = parts[1].toLowerCase();
@@ -1292,7 +1154,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
       
       if (parts.length === 1) {
         // Command suggestions
-        const filtered = COMMANDS.filter(c => ("/" + c.cmd).startsWith(input.toLowerCase())).slice(0, 20);
+        const filtered = COMMANDS.filter(c => ("/" + c.cmd).startsWith(input.toLowerCase())).slice(0, 5);
         suggestions = filtered.map(c => ({ label: "/" + c.cmd, value: "/" + c.cmd + " ", desc: c.desc }));
       } else if (parts.length === 2) {
         // Argument suggestions
@@ -1340,39 +1202,28 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
 
   return (
     <Box flexDirection="column" padding={1}>
-      {uiState.showHeader && (
-        <Header 
-          model={model} 
-          mode={mode} 
-          workMode={workMode}
-          streaming={streaming} 
-          tokens={liveTokens} 
-          projectRoot={agent.getProjectRoot()}
-          username={process.env.USER || process.env.USERNAME || "Engineer"}
-          yolo={autoApprove}
-        />
-      )}
+      <Header 
+        model={model} 
+        mode={mode} 
+        workMode={workMode}
+        streaming={streaming} 
+        tokens={liveTokens} 
+        projectRoot={agent.getProjectRoot()}
+        username={process.env.USER || process.env.USERNAME || "Engineer"}
+        yolo={autoApprove}
+      />
 
       {/* Messages */}
-      {React.useMemo(() => displayMessages.map((msg, i) => (
+      {displayMessages.map((msg, i) => (
         <Box key={i} flexDirection="column">
           <Message role={msg.role} content={msg.content} />
           {msg.toolCalls && <ToolActivity calls={msg.toolCalls} />}
         </Box>
-      )), [displayMessages])}
+      ))}
  
       {/* Active tool calls (while processing) */}
       {isProcessing && activeTools.length > 0 && (
         <ToolActivity calls={activeTools} />
-      )}
-
-      {/* Sub-agents activity */}
-      {Object.values(subAgents).length > 0 && (
-        <Box flexDirection="column">
-          {Object.values(subAgents).map((status) => (
-            <SubAgentCard key={status.id} status={status} />
-          ))}
-        </Box>
       )}
  
       {/* Thought process (faded gray) - show when streaming or thinking */}
@@ -1449,17 +1300,6 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
         </Box>
       )}
 
-      {/* Progress Bar */}
-      {processingProgress && (
-        <Box borderStyle="round" borderColor={theme.primary} paddingX={1} marginY={0}>
-          <ProgressBar 
-            label={processingProgress.message} 
-            percent={processingProgress.percent} 
-            color={theme.primary} 
-          />
-        </Box>
-      )}
-
       {/* Command output */}
       <CommandOutput output={cmdOutput} />
 
@@ -1488,32 +1328,23 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
         turn={agent.getTurnCount()}
         messageCount={agent.getConversationHistory().length}
         sessionId={agent.getSessionId()}
-        showHeader={uiState.showHeader}
-        columns={columns}
       />
       <StatusInfo
         turn={agent.getTurnCount()}
         messageCount={agent.getConversationHistory().length}
         sessionId={agent.getSessionId()}
-        model={model}
-        projectRoot={agent.getProjectRoot()}
-        tokens={liveTokens}
-        cost={((liveTokens / 1_000_000) * 3.00).toFixed(4)}
-        streaming={streaming}
-        showHeader={uiState.showHeader}
-        columns={columns}
       />
 
       {/* Suggestion overlay */}
-      {deferredInput.startsWith("/") && (
-        <Box flexDirection="column" marginLeft={2} marginTop={0}>
+      {input.startsWith("/") && (
+        <Box flexDirection="column" marginLeft={2} marginTop={1}>
           {(() => {
-            const parts = deferredInput.split(" ");
+            const parts = input.split(" ");
             let suggestions: { label: string; desc?: string }[] = [];
             
             if (parts.length === 1) {
-              suggestions = COMMANDS.filter(c => ("/" + c.cmd).startsWith(deferredInput.toLowerCase()))
-                .slice(0, 20).map(c => ({ label: "/" + c.cmd, desc: c.desc }));
+              suggestions = COMMANDS.filter(c => ("/" + c.cmd).startsWith(input.toLowerCase()))
+                .slice(0, 5).map(c => ({ label: "/" + c.cmd, desc: c.desc }));
             } else if (parts.length === 2) {
               const cmd = parts[0].toLowerCase();
               const arg = parts[1].toLowerCase();
@@ -1587,7 +1418,7 @@ export const App: React.FC<AppProps> = ({ agent, initialModel, initialMode, init
             value={input}
             onChange={setInput}
             onSubmit={handleSubmit}
-            placeholder={isProcessing ? "ask next or use /command..." : "ask jim anything..."}
+            placeholder={isProcessing ? "" : "ask jim anything..."}
           />
         </Box>
       )}

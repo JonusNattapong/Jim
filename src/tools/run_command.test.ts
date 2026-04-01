@@ -16,7 +16,7 @@ describe("run_command_handler", () => {
     const result = await run_command_handler({ command: "rm -rf /" });
 
     expect(result.isError).toBe(true);
-    expect(result.content).toContain("BLOCKED");
+    expect(result.content).toContain("Command validation failed");
   });
 
   it("handles command that exits with non-zero code", async () => {
