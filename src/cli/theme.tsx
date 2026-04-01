@@ -206,5 +206,27 @@ export const useThemeMode = () => {
   };
 };
 
+// Module-level theme state for non-React usage (legacy support)
+let currentThemeName = "default";
+
+export const setTheme = (name: string) => {
+  if (themes[name]) {
+    currentThemeName = name;
+    // Also update document/window if available for any listening components
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("themechange", { detail: name }));
+    }
+  }
+};
+
+export const getCurrentTheme = () => themes[currentThemeName] || themes.default;
+
 // Legacy export for backward compatibility
 export const theme = themes.default;
+
+// Export theme list for theme switching UI
+export const THEME_LIST = Object.entries(themes).map(([id, theme]) => ({
+  id,
+  label: id.charAt(0).toUpperCase() + id.slice(1),
+  theme,
+}));
